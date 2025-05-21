@@ -21,13 +21,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend2
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: frontend2
+    container_name: frontend
     environment:
       - REACT_APP_API_URL=http://backend:3000
     ports:
-      - "80:80"
+      - "3001:3001"
     depends_on:
       - backend
 
