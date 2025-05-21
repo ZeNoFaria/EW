@@ -334,3 +334,28 @@ h2 {
     color: #7f8c8d;
     font-size: 14px;
 }
+
+.tag {
+    display: inline-block;
+    padding: 5px 12px;
+    margin: 5px 3px;
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag:hover {
+    background-color: #e0e0e0;
+}
+
+.tag.active {
+    background-color: #4285f4;
+    color: white;
+}
+
+.tag:active {
+    transform: scale(0.95);
+    background-color: #ccc;
+}

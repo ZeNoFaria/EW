@@ -31,12 +31,12 @@
           <button>Filter</button>
         </div>
         
-        <div class="tag-list">
-          <span class="tag">All</span>
-          <span class="tag">Academic</span>
-          <span class="tag">Sports</span>
-          <span class="tag">Travel</span>
-          <span class="tag">Personal</span>
+        <div class="tag-list" id="filter-tags">
+          <span class="tag" onclick="filterByTag('All')">All</span>
+          <span class="tag" onclick="filterByTag('Academic')">Academic</span>
+          <span class="tag" onclick="filterByTag('Sports')">Sports</span>
+          <span class="tag" onclick="filterByTag('Travel')">Travel</span>
+          <span class="tag" onclick="filterByTag('Personal')">Personal</span>
         </div>
         
         <div class="timeline">
@@ -73,11 +73,9 @@
               <span class="tag">Hiking</span>
               <span class="tag">Photos</span>
             </div>
-            <button class="btn">Read More</button>
+            <button class="btn"><a href="item.html">Read More</a></button>
             <button class="btn btn-secondary">Share</button>
           </div>
-          
-          <!-- More timeline items would continue here -->
         </div>
         
         <div class="pagination">
@@ -89,4 +87,6 @@
         </div>
       </div>
     </div>
+    <script src="tag-filter.js"></script>
 </body>
+</html>
