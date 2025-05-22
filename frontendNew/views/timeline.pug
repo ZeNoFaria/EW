@@ -1,0 +1,58 @@
+extends layout
+
+block content
+  .mockup
+    .mockup-header
+      h3= siteName || "My Digital Diary"
+      div
+        if user
+          button.btn= user.name
+        else
+          button.btn Login
+
+    .nav
+      ul
+        each item in navItems || [{text: "Homepage", url: "homepage.html"}, {text: "Timeline", url: "#", active: true}, {text: "Categories", url: "category.html"}, {text: "Tags", url: "#"}, {text: "About", url: "#"}]
+          li
+            a(href=item.url, class=item.active ? "active" : "")= item.text
+
+    .mockup-body
+      h2= pageTitle || "Timeline"
+
+      .search-box
+        input(type="text" placeholder=filterPlaceholder || "Filter timeline...")
+        button= filterButtonText || "Filter"
+
+      .tag-list#filter-tags
+        each tag in filterTags || [{name: "All", value: "All"}, {name: "Academic", value: "Academic"}, {name: "Sports", value: "Sports"}, {name: "Travel", value: "Travel"}, {name: "Personal", value: "Personal"}]
+          span.tag(onclick=`filterByTag('${tag.value}')`)= tag.name
+
+      .timeline
+        each entry in entries || []
+          .timeline-item
+            .timeline-date= entry.date
+            h4= entry.title
+            p= entry.excerpt
+            .tag-list
+              each tag in entry.tags || []
+                span.tag= tag
+            button.btn
+              if entry.id
+                a(href=`/entry/${entry.id}`) #{readMoreText || "Read More"}
+              else
+                | #{readMoreText || "Read More"}
+            button.btn.btn-secondary= shareButtonText || "Share"
+
+      if entries && entries.length === 0
+        p.no-entries= noEntriesMessage || "No entries found."
+
+      if pagination
+        .pagination
+          a(href=pagination.prevUrl || "#") &laquo;
+          each page in pagination.pages || []
+            a(href=page.url, class=page.active ? "active" : "")= page.number
+          a(href=pagination.nextUrl || "#") &raquo;
+
+  if scripts && scripts.length > 0
+    each script in scripts
+      script(src=script)

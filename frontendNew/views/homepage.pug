@@ -1,0 +1,44 @@
+extends layout
+
+block content
+  .mockup
+    .mockup-header
+      h3= siteName || "My Digital Diary"
+      div
+        if user
+          button.btn= user.name
+        else
+          button.btn Login
+
+    .nav
+      ul
+        each item in navItems || [{text: "Homepage", url: "#", active: true}, {text: "Timeline", url: "timeline.pug"}, {text: "Categories", url: "category.html"}, {text: "Tags", url: "#"}, {text: "About", url: "#"}]
+          li
+            a(href=item.url, class=item.active ? "active" : "")= item.text
+
+    .mockup-body
+      h2= welcomeHeader || "Welcome to My Digital Diary"
+      p= welcomeMessage || "This is my personal digital space where I share my thoughts, experiences, and memories."
+
+      .search-box
+        input(type="text" placeholder=searchPlaceholder || "Search my diary...")
+        button= searchButtonText || "Search"
+
+      h3= entriesHeader || "Recent Entries"
+      .timeline
+        each entry in entries || []
+          .timeline-item
+            .timeline-date= entry.date
+            h4= entry.title
+            p= entry.excerpt
+            .tag-list
+              each tag in entry.tags || []
+                span.tag= tag
+            button.btn= readMoreText || "Read More"
+
+      if entries && entries.length === 0
+        p.no-entries= noEntriesMessage || "No entries found."
+
+  if scripts && scripts.length > 0
+    each script in scripts
+      script(src=script)

@@ -1,0 +1,36 @@
+extends layout
+
+block content
+  .mockup
+    .mockup-header
+      h3= siteName
+      div
+        if user
+          button.btn= user.name
+        else
+          button.btn Login
+
+    .nav
+      ul
+        each item in navItems
+          li
+            a(href=item.url, class=item.active ? "active" : "")= item.text
+
+    .mockup-body
+      .entry-container
+        .entry-header
+          h2= entry.title
+          .entry-meta
+            span.entry-date= entry.date
+
+        .entry-content
+          p= entry.content
+
+        .tag-list
+          each tag in entry.tags
+            span.tag= tag
+
+        .entry-actions
+          a(href="/").btn Back to Homepage
+
+  script(src="/js/tag-filter.js")
