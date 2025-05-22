@@ -21,7 +21,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontendNew
       dockerfile: Dockerfile
     container_name: frontend
     environment:
@@ -30,6 +30,11 @@ services:
       - "3001:3001"
     depends_on:
       - backend
+    develop:
+      watch:
+        - path: ./frontendNew
+          target: /app   # or wherever your app is in the container
+          action: sync
 
 volumes:
   mongo-data:

@@ -1,7 +1,8 @@
 var express = require('express');
 var router = express.Router();
-var axios = require('axios'); // Adicionar import do axios
+var axios = require('axios');
 
+// Fix API URL - remove REACT_APP_ prefix for Node.js
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 // Site configuration
@@ -27,13 +28,40 @@ const getNavWithActive = (activeUrl) => {
   }));
 };
 
+// Helper function to format entries with consistent tag structure
+const formatEntries = (entries, tagAsString = false) => {
+  return entries.map(entry => {
+    // Format the date
+    const formattedDate = new Date(entry.date).toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+
+    // Format tags consistently
+    let formattedTags = (entry.tags || []).map(tag => {
+      if (typeof tag === 'object' && tag.name) {
+        return tagAsString ? tag.name : { name: tag.name };
+      }
+      return tagAsString ? tag : { name: tag };
+    });
+
+    return {
+      ...entry,
+      date: formattedDate,
+      tags: formattedTags
+    };
+  });
+};
 
 /* GET home page. */
-router.get('/', async function (req, res, next) { // Declarar função async
+router.get('/', async function (req, res, next) {
   try {
-
     const response = await axios.get(`${API_URL}/api/entries?limit=3`);
     const entries = response.data;
+
+    // Format entries with tags as objects (homepage.pug expects tag.name)
+    const formattedEntries = formatEntries(entries, false);
     
     res.render('homepage', {
       ...siteConfig,
@@ -43,13 +71,14 @@ router.get('/', async function (req, res, next) { // Declarar função async
       searchPlaceholder: "Search my diary...",
       searchButtonText: "Search",
       entriesHeader: "Recent Entries",
-      entries: entries,
+      entries: formattedEntries,
       readMoreText: "Read More",
       noEntriesMessage: "No entries found.",
       scripts: ["js/tag-filter.js"]
     });
   } catch (err) {
     console.error('Error fetching entries from API:', err.message);
+    console.error('Full error:', err.response?.data || err);
     res.status(500).render('error', {
       ...siteConfig,
       navItems: getNavWithActive('/'),
@@ -71,12 +100,25 @@ router.get('/timeline', async (req, res) => {
       params: { page, limit: 10, tag: tag !== 'All' ? tag : undefined }
     });
     
-    // Fetch all tags from API
-    const tagsResponse = await axios.get(`${API_URL}/api/tags`);
+    // Try to fetch tags, but don't fail if endpoint doesn't exist
+    let tags = [];
+    try {
+      const tagsResponse = await axios.get(`${API_URL}/api/tags`);
+      tags = tagsResponse.data;
+    } catch (tagError) {
+      console.log('Tags endpoint not available, using fallback tags');
+      // Extract unique tags from entries as fallback
+      const rawEntries = entriesResponse.data.entries || entriesResponse.data;
+      const allTags = rawEntries.flatMap(entry => entry.tags || []);
+      tags = [...new Set(allTags.map(tag => typeof tag === 'object' ? tag.name : tag))];
+    }
     
-    const entries = entriesResponse.data.entries;
+    const rawEntries = entriesResponse.data.entries || entriesResponse.data;
+    
+    // Format entries with tags as objects (timeline.pug expects tag.name)
+    const entries = formatEntries(rawEntries, false);
+    
     const pagination = entriesResponse.data.pagination;
-    const tags = tagsResponse.data;
     
     // Format tags for template
     const filterTags = [{ name: "All", value: "All" }].concat(
@@ -84,19 +126,22 @@ router.get('/timeline', async (req, res) => {
     );
     
     // Create pagination data
-    const paginationData = {
-      prevUrl: pagination.hasPrevPage ? `/timeline?page=${pagination.prevPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
-      nextUrl: pagination.hasNextPage ? `/timeline?page=${pagination.nextPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
-      pages: []
-    };
-    
-    // Generate page numbers
-    for (let i = 1; i <= pagination.totalPages; i++) {
-      paginationData.pages.push({
-        number: i,
-        url: `/timeline?page=${i}${tag !== 'All' ? `&tag=${tag}` : ''}`,
-        active: i === parseInt(page)
-      });
+    let paginationData = null;
+    if (pagination) {
+      paginationData = {
+        prevUrl: pagination.hasPrevPage ? `/timeline?page=${pagination.prevPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
+        nextUrl: pagination.hasNextPage ? `/timeline?page=${pagination.nextPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
+        pages: []
+      };
+      
+      // Generate page numbers
+      for (let i = 1; i <= pagination.totalPages; i++) {
+        paginationData.pages.push({
+          number: i,
+          url: `/timeline?page=${i}${tag !== 'All' ? `&tag=${tag}` : ''}`,
+          active: i === parseInt(page)
+        });
+      }
     }
 
     res.render('timeline', {
@@ -116,6 +161,7 @@ router.get('/timeline', async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching timeline data from API:', err.message);
+    console.error('Full error:', err.response?.data || err);
     res.status(500).render('error', {
       ...siteConfig,
       navItems: getNavWithActive('/timeline'),
@@ -125,20 +171,23 @@ router.get('/timeline', async (req, res) => {
   }
 });
 
-
 router.get('/entry/:id', async (req, res) => {
   try {
     // Fetch entry from API
     const response = await axios.get(`${API_URL}/api/entries/${req.params.id}`);
     const entry = response.data;
 
+    // Format entry with tags as strings (entry.pug expects string tags)
+    const [formattedEntry] = formatEntries([entry], true);
+
     res.render('entry', {
       ...siteConfig,
       navItems: getNavWithActive(null), // No active nav for entries
-      entry
+      entry: formattedEntry
     });
   } catch (err) {
     console.error(`Error fetching entry ${req.params.id} from API:`, err.message);
+    console.error('Full error:', err.response?.data || err);
     
     // Handle 404 vs other errors
     const status = err.response && err.response.status === 404 ? 404 : 500;
@@ -190,9 +239,19 @@ router.get('/categories', async (req, res) => {
 // Tags route
 router.get('/tags', async (req, res) => {
   try {
-    // Fetch tags from API
-    const response = await axios.get(`${API_URL}/api/tags`);
-    const tags = response.data;
+    // Try to fetch tags from API
+    let tags = [];
+    try {
+      const response = await axios.get(`${API_URL}/api/tags`);
+      tags = response.data;
+    } catch (apiError) {
+      // If tags endpoint doesn't exist, extract from entries
+      console.log('Tags endpoint not available, extracting from entries');
+      const entriesResponse = await axios.get(`${API_URL}/api/entries`);
+      const entries = entriesResponse.data.entries || entriesResponse.data;
+      const allTags = entries.flatMap(entry => entry.tags || []);
+      tags = [...new Set(allTags.map(tag => typeof tag === 'object' ? tag.name : tag))];
+    }
     
     res.render('tags', {
       ...siteConfig,
@@ -200,17 +259,7 @@ router.get('/tags', async (req, res) => {
       tags
     });
   } catch (err) {
-    console.error('Error fetching tags from API:', err.message);
-    
-    // If the API endpoint doesn't exist yet, show "coming soon"
-    if (err.response && err.response.status === 404) {
-      return res.render('error', {
-        ...siteConfig,
-        navItems: getNavWithActive('/tags'),
-        message: "Tags page coming soon",
-        error: { status: "Under Construction" }
-      });
-    }
+    console.error('Error fetching tags:', err.message);
     
     res.status(500).render('error', {
       ...siteConfig,
@@ -247,16 +296,20 @@ router.get('/search', async (req, res) => {
     
     const results = response.data;
     
+    // Format results with tags as strings (search-results.pug expects string tags)
+    const formattedResults = formatEntries(results, true);
+    
     res.render('search-results', {
       ...siteConfig,
       navItems: getNavWithActive(null),
       query,
-      results,
-      resultsCount: results.length,
+      results: formattedResults,
+      resultsCount: formattedResults.length,
       noResultsMessage: "No entries found matching your search."
     });
   } catch (err) {
     console.error('Error searching entries from API:', err.message);
+    console.error('Full error:', err.response?.data || err);
     res.status(500).render('error', {
       ...siteConfig,
       navItems: getNavWithActive(null),

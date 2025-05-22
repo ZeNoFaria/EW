@@ -35,7 +35,7 @@ block content
             p= entry.excerpt
             .tag-list
               each tag in entry.tags || []
-                span.tag= tag
+                span.tag= tag.name
             button.btn
               if entry.id
                 a(href=`/entry/${entry.id}`) #{readMoreText || "Read More"}

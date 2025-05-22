@@ -33,7 +33,7 @@ block content
             p= entry.excerpt
             .tag-list
               each tag in entry.tags || []
-                span.tag= tag
+                span.tag= tag.name
             button.btn= readMoreText || "Read More"
 
       if entries && entries.length === 0
