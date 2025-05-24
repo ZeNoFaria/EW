@@ -29,6 +29,7 @@ const getNavWithActive = (activeUrl) => {
 };
 
 // Helper function to format entries with consistent tag structure
+// Helper function to format entries with consistent tag structure
 const formatEntries = (entries, tagAsString = false) => {
   return entries.map(entry => {
     // Format the date
@@ -38,18 +39,43 @@ const formatEntries = (entries, tagAsString = false) => {
       day: 'numeric'
     });
 
-    // Format tags consistently
+    // Format tags consistently - handle populated vs unpopulated refs
     let formattedTags = (entry.tags || []).map(tag => {
+      // If tag is populated object with name
       if (typeof tag === 'object' && tag.name) {
         return tagAsString ? tag.name : { name: tag.name };
       }
-      return tagAsString ? tag : { name: tag };
+      // If tag is just a string (already processed)
+      if (typeof tag === 'string') {
+        return tagAsString ? tag : { name: tag };
+      }
+      // If tag is ObjectId string, use it as name (fallback)
+      const tagName = tag.toString();
+      return tagAsString ? tagName : { name: tagName };
     });
+
+    // Handle category - might be populated or just ObjectId
+    let categoryName = null;
+    if (entry.category) {
+      if (typeof entry.category === 'object' && entry.category.name) {
+        categoryName = entry.category.name;
+      } else if (typeof entry.category === 'string') {
+        categoryName = entry.category;
+      }
+    }
+
+    // Use MongoDB's _id and convert to string for URLs
+    const entryId = entry._id ? entry._id.toString() : entry.id;
 
     return {
       ...entry,
+      id: entryId, // Convert ObjectId to string for URLs
       date: formattedDate,
-      tags: formattedTags
+      tags: formattedTags,
+      category: categoryName,
+      // Keep original fields
+      _id: entry._id,
+      originalCategory: entry.category
     };
   });
 };
@@ -62,6 +88,15 @@ router.get('/', async function (req, res, next) {
 
     // Format entries with tags as objects (homepage.pug expects tag.name)
     const formattedEntries = formatEntries(entries, false);
+
+    // Extract all unique tag names
+    const tagSet = new Set();
+    formattedEntries.forEach(entry => {
+      (entry.tags || []).forEach(tag => {
+        if (tag?.name) tagSet.add(tag.name);
+      });
+    });
+    const allTags = Array.from(tagSet).map(name => ({ name }));
     
     res.render('homepage', {
       ...siteConfig,
@@ -72,9 +107,10 @@ router.get('/', async function (req, res, next) {
       searchButtonText: "Search",
       entriesHeader: "Recent Entries",
       entries: formattedEntries,
+      allTags,
       readMoreText: "Read More",
       noEntriesMessage: "No entries found.",
-      scripts: ["js/tag-filter.js"]
+      scripts: ["javascripts/tag-filter.js", "javascripts/search.js"]
     });
   } catch (err) {
     console.error('Error fetching entries from API:', err.message);
@@ -95,54 +131,92 @@ router.get('/timeline', async (req, res) => {
     const page = req.query.page || 1;
     const tag = req.query.tag || 'All';
     
-    // Fetch entries from API
-    const entriesResponse = await axios.get(`${API_URL}/api/entries`, {
-      params: { page, limit: 10, tag: tag !== 'All' ? tag : undefined }
-    });
-    
-    // Try to fetch tags, but don't fail if endpoint doesn't exist
+    let rawEntries = [];
     let tags = [];
+    let paginationData = null;
+    
+    try {
+      // Try the specific timeline endpoint first
+      console.log(`Fetching from: ${API_URL}/api/entries/timeline`);
+      const entriesResponse = await axios.get(`${API_URL}/api/entries/timeline`, {
+        params: { page, limit: 10, tag: tag !== 'All' ? tag : undefined }
+      });
+      rawEntries = entriesResponse.data;
+      
+      // Check if response has pagination info
+      if (entriesResponse.data.pagination) {
+        paginationData = entriesResponse.data.pagination;
+        rawEntries = entriesResponse.data.entries || entriesResponse.data.data || [];
+      }
+    } catch (timelineError) {
+      console.log('Timeline endpoint failed, trying general entries endpoint');
+      try {
+        // Fallback to general entries endpoint
+        const entriesResponse = await axios.get(`${API_URL}/api/entries`, {
+          params: { page, limit: 10, tag: tag !== 'All' ? tag : undefined }
+        });
+        
+        // Handle different response structures
+        if (entriesResponse.data.entries) {
+          rawEntries = entriesResponse.data.entries;
+          paginationData = entriesResponse.data.pagination;
+        } else if (Array.isArray(entriesResponse.data)) {
+          rawEntries = entriesResponse.data;
+        } else {
+          rawEntries = entriesResponse.data.data || [];
+        }
+      } catch (generalError) {
+        console.error('Both timeline and general entries endpoints failed');
+        throw generalError;
+      }
+    }
+    
+    // Try to fetch tags
     try {
       const tagsResponse = await axios.get(`${API_URL}/api/tags`);
       tags = tagsResponse.data;
     } catch (tagError) {
-      console.log('Tags endpoint not available, using fallback tags');
+      console.log('Tags endpoint not available, extracting from entries');
       // Extract unique tags from entries as fallback
-      const rawEntries = entriesResponse.data.entries || entriesResponse.data;
       const allTags = rawEntries.flatMap(entry => entry.tags || []);
-      tags = [...new Set(allTags.map(tag => typeof tag === 'object' ? tag.name : tag))];
+      const uniqueTags = [...new Set(allTags.map(tag => typeof tag === 'object' ? tag.name : tag))];
+      tags = uniqueTags.filter(tag => tag && tag.trim()); // Remove empty/whitespace tags
     }
     
-    const rawEntries = entriesResponse.data.entries || entriesResponse.data;
-    
     // Format entries with tags as objects (timeline.pug expects tag.name)
-    const entries = formatEntries(rawEntries, false);
-    
-    const pagination = entriesResponse.data.pagination;
+    const formattedEntries = formatEntries(rawEntries, false);
     
     // Format tags for template
     const filterTags = [{ name: "All", value: "All" }].concat(
       tags.map(tag => ({ name: tag, value: tag }))
     );
     
-    // Create pagination data
-    let paginationData = null;
-    if (pagination) {
-      paginationData = {
-        prevUrl: pagination.hasPrevPage ? `/timeline?page=${pagination.prevPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
-        nextUrl: pagination.hasNextPage ? `/timeline?page=${pagination.nextPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
+    // Create pagination data if it exists
+    let finalPaginationData = null;
+    if (paginationData) {
+      finalPaginationData = {
+        prevUrl: paginationData.hasPrevPage ? `/timeline?page=${paginationData.prevPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
+        nextUrl: paginationData.hasNextPage ? `/timeline?page=${paginationData.nextPage}${tag !== 'All' ? `&tag=${tag}` : ''}` : null,
         pages: []
       };
       
       // Generate page numbers
-      for (let i = 1; i <= pagination.totalPages; i++) {
-        paginationData.pages.push({
+      for (let i = 1; i <= paginationData.totalPages; i++) {
+        finalPaginationData.pages.push({
           number: i,
           url: `/timeline?page=${i}${tag !== 'All' ? `&tag=${tag}` : ''}`,
           active: i === parseInt(page)
         });
       }
     }
+
+    // Debug logging
+    console.log('Timeline render data:', {
+      entriesCount: formattedEntries.length,
+      tagsCount: tags.length,
+      hasPagination: !!finalPaginationData,
+      firstEntry: formattedEntries[0] ? formattedEntries[0].title : 'none'
+    });
 
     res.render('timeline', {
       ...siteConfig,
@@ -152,21 +226,33 @@ router.get('/timeline', async (req, res) => {
       filterPlaceholder: "Filter timeline...",
       filterButtonText: "Filter",
       filterTags,
-      entries,
+      entries: formattedEntries,
       readMoreText: "Read More",
       shareButtonText: "Share",
       noEntriesMessage: "No entries found.",
-      pagination: paginationData,
-      scripts: ["js/tag-filter.js"]
+      pagination: finalPaginationData,
+      scripts: ["javascripts/tag-filter.js"]
     });
   } catch (err) {
     console.error('Error fetching timeline data from API:', err.message);
+    console.error('API_URL:', API_URL);
     console.error('Full error:', err.response?.data || err);
-    res.status(500).render('error', {
+    
+    // Render with empty data instead of showing error page
+    res.render('timeline', {
       ...siteConfig,
+      timelineTitle: "Timeline | Digital Diary",
+      pageTitle: "Timeline",
       navItems: getNavWithActive('/timeline'),
-      message: "Error loading timeline",
-      error: { status: 500 }
+      filterPlaceholder: "Filter timeline...",
+      filterButtonText: "Filter",
+      filterTags: [{ name: "All", value: "All" }],
+      entries: [], // Empty entries will show "No entries found"
+      readMoreText: "Read More",
+      shareButtonText: "Share",
+      noEntriesMessage: "Unable to load entries. Please check your API connection.",
+      pagination: null,
+      scripts: ["javascripts/tag-filter.js"]
     });
   }
 });
@@ -180,8 +266,47 @@ router.get('/entry/:id', async (req, res) => {
     // Format entry with tags as strings (entry.pug expects string tags)
     const [formattedEntry] = formatEntries([entry], true);
 
+    // Try to fetch related entries (optional)
+    let relatedEntries = [];
+    try {
+      if (formattedEntry.tags && formattedEntry.tags.length > 0) {
+        // Get entries with similar tags
+        const relatedResponse = await axios.get(`${API_URL}/api/entries`, {
+          params: { 
+            tags: formattedEntry.tags.slice(0, 2).join(','), // Use first 2 tags
+            limit: 3,
+            exclude: req.params.id // Don't include current entry
+          }
+        });
+        
+        const rawRelated = Array.isArray(relatedResponse.data) 
+          ? relatedResponse.data 
+          : relatedResponse.data.entries || [];
+        
+        relatedEntries = formatEntries(rawRelated.slice(0, 3), true); // Limit to 3
+      }
+    } catch (relatedError) {
+      console.log('Could not fetch related entries:', relatedError.message);
+      // Continue without related entries
+    }
+
+    // Add related entries to the formatted entry
+    formattedEntry.relatedEntries = relatedEntries;
+
+    // Set page title
+    const pageTitle = `${formattedEntry.title} | ${siteConfig.siteName}`;
+
+    console.log('Entry render data:', {
+      id: formattedEntry.id,
+      title: formattedEntry.title,
+      hasContent: !!formattedEntry.content,
+      tagsCount: formattedEntry.tags?.length || 0,
+      relatedCount: relatedEntries.length
+    });
+
     res.render('entry', {
       ...siteConfig,
+      title: pageTitle,
       navItems: getNavWithActive(null), // No active nav for entries
       entry: formattedEntry
     });
