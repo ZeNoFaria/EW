@@ -330,28 +330,34 @@ router.get('/entry/:id', async (req, res) => {
 // Categories route
 router.get('/categories', async (req, res) => {
   try {
-    // Fetch categories from API
     const response = await axios.get(`${API_URL}/api/categories`);
     const categories = response.data;
-    
+
+    // Stats
+    const totalItems = categories.reduce((sum, cat) => sum + (cat.count || 0), 0);
+    const activeCategories = categories.length;
+    const publicItems = totalItems;
+    const lastItemDate = categories.reduce((latest, cat) => {
+      if (cat.lastUpdate && (!latest || new Date(cat.lastUpdate) > new Date(latest))) {
+        return cat.lastUpdate;
+      }
+      return latest;
+    }, null);
+
     res.render('categories', {
       ...siteConfig,
       navItems: getNavWithActive('/categories'),
-      categories
+      title: "Categorias - Meu Diário Digital",
+      categories,
+      totalItems,
+      activeCategories,
+      publicItems,
+      lastItemDate,
+      user: req.user || null
     });
+
   } catch (err) {
-    console.error('Error fetching categories from API:', err.message);
-    
-    // If the API endpoint doesn't exist yet, show "coming soon"
-    if (err.response && err.response.status === 404) {
-      return res.render('error', {
-        ...siteConfig,
-        navItems: getNavWithActive('/categories'),
-        message: "Categories page coming soon",
-        error: { status: "Under Construction" }
-      });
-    }
-    
+    console.error('Error loading /categories page:', err);
     res.status(500).render('error', {
       ...siteConfig,
       navItems: getNavWithActive('/categories'),
@@ -360,6 +366,7 @@ router.get('/categories', async (req, res) => {
     });
   }
 });
+
 
 // Tags route
 router.get('/tags', async (req, res) => {
@@ -442,6 +449,244 @@ router.get('/search', async (req, res) => {
       error: { status: 500 }
     });
   }
+});
+
+// Categories route - Enhanced version
+router.get('/categories', async (req, res) => {
+  try {
+    let categories = [];
+    let totalItems = 0;
+    let tags = [];
+    
+    // Try to fetch categories from API
+    try {
+      const response = await axios.get(`${API_URL}/api/categories`);
+      categories = response.data;
+    } catch (apiError) {
+      console.log('Categories endpoint not available, building from entries');
+      
+      // Fallback: Build categories from entries
+      try {
+        const entriesResponse = await axios.get(`${API_URL}/api/entries`);
+        const entries = Array.isArray(entriesResponse.data) ? entriesResponse.data : entriesResponse.data.entries || [];
+        
+        // Group entries by category
+        const categoryMap = new Map();
+        
+        entries.forEach(entry => {
+          const categoryName = entry.category?.name || entry.category || 'Uncategorized';
+          const categorySlug = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          
+          if (!categoryMap.has(categoryName)) {
+            categoryMap.set(categoryName, {
+              name: categoryName,
+              slug: categorySlug,
+              count: 0,
+              recentItems: [],
+              lastUpdate: null,
+              description: `Items in ${categoryName}`,
+              icon: 'fas fa-folder'
+            });
+          }
+          
+          const category = categoryMap.get(categoryName);
+          category.count++;
+          
+          // Add to recent items (keep last 5)
+          const formattedDate = new Date(entry.date).toLocaleDateString('pt-BR');
+          category.recentItems.push({
+            id: entry._id?.toString() || entry.id,
+            title: entry.title,
+            date: formattedDate
+          });
+          
+          // Update last update date
+          const entryDate = new Date(entry.date);
+          if (!category.lastUpdate || entryDate > new Date(category.lastUpdate)) {
+            category.lastUpdate = formattedDate;
+          }
+        });
+        
+        categories = Array.from(categoryMap.values())
+          .map(cat => ({
+            ...cat,
+            recentItems: cat.recentItems.slice(-5).reverse() // Keep 5 most recent
+          }))
+          .sort((a, b) => b.count - a.count); // Sort by count descending
+        
+        totalItems = entries.length;
+      } catch (entriesError) {
+        console.error('Could not fetch entries for categories:', entriesError.message);
+      }
+    }
+    
+    // Try to fetch tags
+    try {
+      const tagsResponse = await axios.get(`${API_URL}/api/tags`);
+      tags = tagsResponse.data;
+    } catch (tagError) {
+      console.log('Tags endpoint not available, extracting from entries');
+      try {
+        const entriesResponse = await axios.get(`${API_URL}/api/entries`);
+        const entries = Array.isArray(entriesResponse.data) ? entriesResponse.data : entriesResponse.data.entries || [];
+        
+        // Extract and count tags
+        const tagMap = new Map();
+        entries.forEach(entry => {
+          (entry.tags || []).forEach(tag => {
+            const tagName = typeof tag === 'object' ? tag.name : tag;
+            if (tagName && tagName.trim()) {
+              tagMap.set(tagName, (tagMap.get(tagName) || 0) + 1);
+            }
+          });
+        });
+        
+        tags = Array.from(tagMap.entries()).map(([name, count]) => ({
+          name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          count,
+          size: Math.min(5, Math.max(1, Math.ceil(count / Math.max(1, tagMap.size / 5))))
+        })).sort((a, b) => b.count - a.count);
+      } catch (entriesError) {
+        console.error('Could not extract tags from entries:', entriesError.message);
+      }
+    }
+    
+    // Calculate stats
+    const activeCategories = categories.length;
+    const publicItems = totalItems; // Assuming all are public for now
+    const lastItemDate = categories.length > 0 
+      ? categories.reduce((latest, cat) => 
+          !latest || (cat.lastUpdate && new Date(cat.lastUpdate) > new Date(latest)) 
+            ? cat.lastUpdate : latest, null)
+      : 'N/A';
+    
+    console.log('Categories render data:', {
+      categoriesCount: categories.length,
+      totalItems,
+      activeCategories,
+      tagsCount: tags.length
+    });
+    
+    res.render('categories', {
+      ...siteConfig,
+      title: "Categorias - Meu Diário Digital",
+      navItems: getNavWithActive('/categories'),
+      categories,
+      tags,
+      totalItems,
+      activeCategories,
+      publicItems,
+      lastItemDate,
+      // Add user context (you may need to adapt this based on your auth system)
+      user: req.user || null
+    });
+    
+  } catch (err) {
+    console.error('Error in categories route:', err.message);
+    console.error('Full error:', err.response?.data || err);
+    
+    res.status(500).render('error', {
+      ...siteConfig,
+      navItems: getNavWithActive('/categories'),
+      message: "Error loading categories",
+      error: { status: 500 }
+    });
+  }
+});
+
+// Category detail page
+router.get('/category/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    
+    // Fetch entries for this category
+    const response = await axios.get(`${API_URL}/api/entries`, {
+      params: { category: slug, limit: 50 }
+    });
+    
+    const entries = Array.isArray(response.data) ? response.data : response.data.entries || [];
+    const formattedEntries = formatEntries(entries, false);
+    
+    // Find category name from entries or use slug
+    const categoryName = entries.length > 0 && entries[0].category?.name 
+      ? entries[0].category.name 
+      : slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    res.render('timeline', { // Reuse timeline template
+      ...siteConfig,
+      title: `${categoryName} - Categorias`,
+      pageTitle: `Categoria: ${categoryName}`,
+      navItems: getNavWithActive('/categories'),
+      filterPlaceholder: "Filter entries...",
+      filterButtonText: "Filter",
+      filterTags: [{ name: "All", value: "All" }],
+      entries: formattedEntries,
+      readMoreText: "Read More",
+      shareButtonText: "Share",
+      noEntriesMessage: `No entries found in category "${categoryName}".`,
+      pagination: null,
+      scripts: ["javascripts/tag-filter.js"]
+    });
+    
+  } catch (err) {
+    console.error(`Error fetching category ${req.params.slug}:`, err.message);
+    res.status(500).render('error', {
+      ...siteConfig,
+      navItems: getNavWithActive('/categories'),
+      message: "Error loading category",
+      error: { status: 500 }
+    });
+  }
+});
+
+// Tag detail page
+router.get('/tag/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const tagName = slug.replace(/-/g, ' ');
+    
+    // Fetch entries for this tag
+    const response = await axios.get(`${API_URL}/api/entries`, {
+      params: { tag: tagName, limit: 50 }
+    });
+    
+    const entries = Array.isArray(response.data) ? response.data : response.data.entries || [];
+    const formattedEntries = formatEntries(entries, false);
+    
+    res.render('timeline', { // Reuse timeline template
+      ...siteConfig,
+      title: `${tagName} - Tags`,
+      pageTitle: `Tag: ${tagName}`,
+      navItems: getNavWithActive('/tags'),
+      filterPlaceholder: "Filter entries...",
+      filterButtonText: "Filter",
+      filterTags: [{ name: "All", value: "All" }],
+      entries: formattedEntries,
+      readMoreText: "Read More",
+      shareButtonText: "Share",
+      noEntriesMessage: `No entries found with tag "${tagName}".`,
+      pagination: null,
+      scripts: ["javascripts/tag-filter.js"]
+    });
+    
+  } catch (err) {
+    console.error(`Error fetching tag ${req.params.slug}:`, err.message);
+    res.status(500).render('error', {
+      ...siteConfig,
+      navItems: getNavWithActive('/tags'),
+      message: "Error loading tag",
+      error: { status: 500 }
+    });
+  }
+});
+
+
+
+// Item detail page (alternative route for the Portuguese template)
+router.get('/item/:id', (req, res) => {
+  // Redirect to the existing entry route
+  res.redirect(`/entry/${req.params.id}`);
 });
 
 module.exports = router;

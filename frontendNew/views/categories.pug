@@ -1,0 +1,70 @@
+extends layout
+
+block content
+  .mockup
+    .mockup-header
+      h3= siteName || "My Digital Diary"
+      div
+        if user
+          button.btn= user.name
+        else
+          button.btn Login
+
+    .nav
+      ul
+        each item in navItems || [{text: "Homepage", url: "#", active: true}, {text: "Categories", url: "category.html"}, {text: "Tags", url: "#"}, {text: "About", url: "#"}]
+          li
+            a(href=item.url, class=item.active ? "active" : "")= item.text
+      
+    .mockup-body
+      if categories && categories.length > 0
+        .item-grid
+          each category in categories
+            .grid-item
+              .grid-item-header
+                span
+                  i(class=category.icon || 'fas fa-folder')
+                  |  #{category.name}
+                span.tag.active #{category.count || 0} items
+              .grid-item-body
+                p= category.description || 'No description available'
+                
+                if category.recentItems && category.recentItems.length > 0
+                  h4 Recent Items:
+                  ul.recent-items
+                    each item in category.recentItems
+                      li
+                        a(href=`/entry/${item.id}`)= item.title
+                        span.date= item.date
+
+                
+                .entry-actions
+                  .entry-meta
+                    .entry-date Last update: #{category.lastUpdate || 'N/A'}
+                  a.btn(href=`/category/${category.slug}`) View All
+      else
+        .no-entries
+          h2 No categories found
+          p Start creating content to see categories appear here.
+          
+      if tags && tags.length > 0
+        .related-entries
+          h3 Popular Tags
+          .tag-list
+            each tag in tags.slice(0, 20)
+              a.tag(href=`/tag/${tag.slug}`)
+                | #{tag.name} (#{tag.count || 0})
+      
+      .stat-cards
+        .stat-card
+          .stat-label Total Items
+          .stat-number= totalItems || 0
+        .stat-card
+          .stat-label Active Categories  
+          .stat-number= activeCategories || 0
+        .stat-card
+          .stat-label Last Update
+          .stat-number= lastItemDate || 'N/A'
+        .stat-card
+          .stat-label Public Items
+          .stat-number= publicItems || 0

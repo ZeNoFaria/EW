@@ -1,26 +1,41 @@
-const Category = require("../models/categorySchema.js");
-const Entry = require("../models/entrySchema.js");
+const Category = require('../models/categorySchema');
+const Entry = require('../models/entrySchema');
 
 // Get all categories
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
-    // For each category, count the number of entries
-    const categoriesWithCount = await Promise.all(
-      categories.map(async (category) => {
-        const count = await Entry.countDocuments({ category: category._id });
+    const enriched = await Promise.all(
+      categories.map(async (cat) => {
+        const entries = await Entry.find({ category: cat._id }).sort({ date: -1 }).limit(5);
+
+        const recentItems = entries.map(e => ({
+          id: e._id.toString(),
+          title: e.title,
+          date: new Date(e.date).toLocaleDateString('pt-BR')
+        }));
+
+        const lastUpdate = recentItems.length > 0 ? recentItems[0].date : null;
+
         return {
-          ...category.toObject(),
-          entryCount: count,
+          _id: cat._id,
+          name: cat.name,
+          description: cat.description || `Items in ${cat.name}`,
+          icon: cat.icon || '📁',
+          slug: cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+          count: entries.length,
+          recentItems,
+          lastUpdate
         };
       })
     );
 
-    res.status(200).json(categoriesWithCount);
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    res.status(500).json({ message: "Failed to fetch categories" });
+    res.json(enriched); // ✅ send as JSON for frontend API consumption
+
+  } catch (err) {
+    console.error('Error in getAllCategories:', err);
+    res.status(500).json({ error: 'Failed to fetch categories' });
   }
 };
 
