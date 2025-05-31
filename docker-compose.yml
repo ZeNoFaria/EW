@@ -21,7 +21,7 @@ services:
 
   frontend:
     build:
-      context: ./frontendNew
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
     environment:
@@ -32,8 +32,8 @@ services:
       - backend
     develop:
       watch:
-        - path: ./frontendNew
-          target: /app   # or wherever your app is in the container
+        - path: ./frontend
+          target: /app # or wherever your app is in the container
           action: sync
 
 volumes:
