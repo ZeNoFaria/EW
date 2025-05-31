@@ -8,6 +8,7 @@ const swaggerSpec = require("./swagger");
 const entryRoutes = require("./routes/entryRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const authRoutes = require("./routes/authRoutes");
+const sipRoutes = require("./routes/sipRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ mongoose
 app.use("/api/entries", entryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/sip", sipRoutes);
 app.use(
   "/api-docs",
   (req, res, next) => {

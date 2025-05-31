@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "dataCreacao": "2025-01-15",
+    "titulo": "Viagem ao Porto - Janeiro 2025",
+    "tipo": "viagem",
+    "descricao": "Fim de semana no Porto com visitas aos principais pontos turísticos",
+    "localizacao": "Porto, Portugal",
+    "tags": ["viagem", "porto", "turismo", "fim-de-semana"]
+  },
+  "files": [
+    {
+      "nome": "foto_ponte_dom_luis.jpg",
+      "tipo": "imagem",
+      "descricao": "Vista da Ponte Dom Luís I"
+    },
+    {
+      "nome": "relatorio_viagem.pdf",
+      "tipo": "documento",
+      "descricao": "Relatório detalhado da viagem"
+    },
+    {
+      "nome": "video_passeio.mp4",
+      "tipo": "video",
+      "descricao": "Vídeo do passeio pela Ribeira"
+    }
+  ],
+  "observacoes": "Primeira viagem ao Porto, experiência muito positiva"
+}
