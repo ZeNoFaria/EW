@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const passport = require("passport");
 const authController = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 
@@ -77,5 +78,72 @@ router.post("/login", authController.login);
  *         description: Not authenticated
  */
 router.get("/profile", protect, authController.getProfile);
+
+// Google OAuth routes
+/**
+ * @swagger
+ * /auth/google:
+ *   get:
+ *     summary: Initiate Google OAuth login
+ *     tags: [OAuth]
+ *     responses:
+ *       302:
+ *         description: Redirect to Google OAuth
+ */
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     summary: Google OAuth callback
+ *     tags: [OAuth]
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with token
+ */
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/auth/failure" }),
+  authController.oauthSuccess
+);
+
+// Facebook OAuth routes
+/**
+ * @swagger
+ * /auth/facebook:
+ *   get:
+ *     summary: Initiate Facebook OAuth login
+ *     tags: [OAuth]
+ *     responses:
+ *       302:
+ *         description: Redirect to Facebook OAuth
+ */
+router.get(
+  "/facebook",
+  passport.authenticate("facebook", { scope: ["email"] })
+);
+
+/**
+ * @swagger
+ * /auth/facebook/callback:
+ *   get:
+ *     summary: Facebook OAuth callback
+ *     tags: [OAuth]
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with token
+ */
+router.get(
+  "/facebook/callback",
+  passport.authenticate("facebook", { failureRedirect: "/auth/failure" }),
+  authController.oauthSuccess
+);
+
+// OAuth failure route
+router.get("/failure", authController.oauthFailure);
 
 module.exports = router;

@@ -1,8 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const session = require("express-session");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
+
+// Import passport configuration
+require("./config/passport");
+const passport = require("passport");
 
 // Import routes
 const entryRoutes = require("./routes/entryRoutes");
@@ -16,8 +21,35 @@ const MONGO_URL =
   process.env.MONGO_URL || "mongodb://localhost:27017/mydatabase";
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3001",
+    credentials: true,
+  })
+);
 app.use(express.json());
+
+// Session configuration for OAuth
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your_session_secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+console.log("Environment check:", {
+  JWT_SECRET: process.env.JWT_SECRET ? "LOADED" : "NOT_LOADED",
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "LOADED" : "NOT_LOADED",
+});
 
 // Connect to MongoDB with improved connection options
 mongoose
@@ -96,6 +128,8 @@ const initializeData = async () => {
           email: "admin@example.com",
           password: hashedPassword,
           isAdmin: true,
+          role: "admin",
+          provider: "local",
         });
         console.log(
           "Admin user created with username: admin, password: admin123"
