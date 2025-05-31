@@ -90,12 +90,10 @@ exports.ingestSIP = [
 
       if (!manifestoEntry) {
         await fs.unlink(zipPath);
-        return res
-          .status(400)
-          .json({
-            error:
-              "Manifesto SIP não encontrado (manifesto-SIP.json ou manifesto-SIP.xml)",
-          });
+        return res.status(400).json({
+          error:
+            "Manifesto SIP não encontrado (manifesto-SIP.json ou manifesto-SIP.xml)",
+        });
       }
 
       // Ler e validar manifesto
@@ -235,6 +233,72 @@ exports.getAllAIPs = async (req, res) => {
   } catch (error) {
     console.error("Erro ao listar AIPs:", error);
     res.status(500).json({ error: "Erro ao listar AIPs" });
+  }
+};
+
+exports.getAIPs = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      tipo,
+      isPublic,
+      search,
+      sortBy = "createdAt",
+      order = "desc",
+    } = req.query;
+
+    const filter = { status: "ingested" };
+
+    // Se não for admin, só pode ver os seus próprios ou públicos
+    if (req.user.role !== "admin") {
+      filter.$or = [{ "metadata.produtor": req.user._id }, { isPublic: true }];
+    }
+
+    if (tipo) {
+      filter["metadata.tipo"] = tipo;
+    }
+
+    if (isPublic !== undefined) {
+      filter.isPublic = isPublic === "true";
+    }
+
+    if (search) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { "metadata.titulo": { $regex: search, $options: "i" } },
+          { "metadata.descricao": { $regex: search, $options: "i" } },
+          { "metadata.localizacao": { $regex: search, $options: "i" } },
+        ],
+      });
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = order === "desc" ? -1 : 1;
+
+    const aips = await SIP.find(filter)
+      .populate("metadata.produtor", "username email")
+      .populate("metadata.submitter", "username email")
+      .populate("metadata.tipo", "name slug color icon")
+      .populate("metadata.tags", "name slug color")
+      .sort(sortOptions)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await SIP.countDocuments(filter);
+
+    res.json({
+      aips,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      total,
+      hasNextPage: page < Math.ceil(total / limit),
+      hasPrevPage: page > 1,
+    });
+  } catch (error) {
+    console.error("Erro ao obter AIPs:", error);
+    res.status(500).json({ error: "Erro ao obter AIPs" });
   }
 };
 

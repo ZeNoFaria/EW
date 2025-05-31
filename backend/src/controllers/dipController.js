@@ -6,9 +6,13 @@ const fs = require("fs").promises;
 // Exportar DIP (ZIP similar ao SIP original)
 exports.exportDIP = async (req, res) => {
   try {
-    const aip = await SIP.findById(req.params.id).populate(
-      "metadata.produtor",
-      "username email"
+    const aipId = req.params.id;
+
+    const aip = await SIP.findOne({
+      _id: aipId,
+      status: "ingested",
+    }).populate(
+      "metadata.produtor metadata.submitter metadata.tipo metadata.tags"
     );
 
     if (!aip) {
@@ -18,72 +22,54 @@ exports.exportDIP = async (req, res) => {
     // Verificar permissões
     if (
       !aip.isPublic &&
-      req.user.role !== "admin" &&
-      !aip.metadata.produtor._id.equals(req.user._id)
+      aip.metadata.produtor._id.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
     ) {
-      return res.status(403).json({ error: "Acesso negado" });
+      return res
+        .status(403)
+        .json({ error: "Sem permissão para exportar este AIP" });
     }
 
     const zip = new AdmZip();
 
     // Criar manifesto DIP
-    const dipManifesto = {
-      metadata: {
-        ...aip.metadata,
-        dataExportacao: new Date().toISOString(),
-        exportadoPor: req.user.username,
-        versao: "1.0",
-      },
+    const dipManifest = {
+      type: "DIP",
+      exportedAt: new Date().toISOString(),
+      exportedBy: req.user._id,
+      originalAIP: aip._id,
+      metadata: aip.metadata,
       files: aip.files.map((file) => ({
-        nome: file.originalName,
-        tipo: file.mimetype,
-        tamanho: file.size,
-        checksum: file.checksum,
+        originalName: file.originalName,
+        filename: file.filename,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
       })),
-      estatisticas: {
-        totalFicheiros: aip.files.length,
-        tamanhoTotal: aip.files.reduce((sum, file) => sum + file.size, 0),
-      },
     };
 
-    // Adicionar manifesto ao ZIP
     zip.addFile(
       "manifesto-DIP.json",
-      Buffer.from(JSON.stringify(dipManifesto, null, 2))
+      Buffer.from(JSON.stringify(dipManifest, null, 2), "utf8")
     );
 
-    // Adicionar ficheiros ao ZIP
-    for (let file of aip.files) {
-      try {
-        const fileBuffer = await fs.readFile(file.path);
-        zip.addFile(file.originalName, fileBuffer);
-      } catch (fileError) {
-        console.error(`Erro ao ler ficheiro ${file.originalName}:`, fileError);
-        // Continuar com outros ficheiros
+    // Adicionar ficheiros
+    for (const file of aip.files) {
+      const filePath = path.join(process.cwd(), "uploads", file.path);
+      if (fs.existsSync(filePath)) {
+        zip.addLocalFile(filePath, "files/", file.originalName);
       }
     }
 
-    // Preparar resposta
-    const zipBuffer = zip.toBuffer();
-    const filename = `DIP-${aip.metadata.titulo.replace(
-      /[^a-zA-Z0-9]/g,
-      "_"
-    )}-${Date.now()}.zip`;
-
     res.set({
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Content-Length": zipBuffer.length,
+      "Content-Disposition": `attachment; filename="DIP_${aip.metadata.titulo.replace(
+        /[^a-zA-Z0-9]/g,
+        "_"
+      )}_${aip._id}.zip"`,
     });
 
-    // Log da exportação
-    aip.processingLogs.push({
-      level: "info",
-      message: `DIP exportado por ${req.user.username}`,
-    });
-    await aip.save();
-
-    res.send(zipBuffer);
+    res.send(zip.toBuffer());
   } catch (error) {
     console.error("Erro ao exportar DIP:", error);
     res.status(500).json({ error: "Erro ao exportar DIP" });

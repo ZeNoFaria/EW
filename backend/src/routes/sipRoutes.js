@@ -3,6 +3,7 @@ const router = express.Router();
 const sipController = require("../controllers/sipController");
 const dipController = require("../controllers/dipController");
 const { protect } = require("../middleware/auth");
+const { logAction } = require("../middleware/logger");
 
 /**
  * @swagger
@@ -30,7 +31,7 @@ const { protect } = require("../middleware/auth");
  *       401:
  *         description: Not authenticated
  */
-router.post("/ingest", protect, sipController.ingestSIP);
+router.post("/ingest", protect, logAction("upload"), sipController.ingestSIP);
 
 /**
  * @swagger
@@ -67,7 +68,7 @@ router.post("/ingest", protect, sipController.ingestSIP);
  *       401:
  *         description: Not authenticated
  */
-router.get("/aips", protect, sipController.getAllAIPs);
+router.get("/aips", protect, logAction("view"), sipController.getAIPs);
 
 /**
  * @swagger
@@ -91,7 +92,7 @@ router.get("/aips", protect, sipController.getAllAIPs);
  *       403:
  *         description: Access denied
  */
-router.get("/aips/:id", protect, sipController.getAIPById);
+router.get("/aips/:id", protect, logAction("view"), sipController.getAIPById);
 
 /**
  * @swagger
@@ -124,7 +125,12 @@ router.get("/aips/:id", protect, sipController.getAIPById);
  *       403:
  *         description: No permission
  */
-router.put("/aips/:id/visibility", protect, sipController.updateAIPVisibility);
+router.put(
+  "/aips/:id/visibility",
+  protect,
+  logAction("update"),
+  sipController.updateAIPVisibility
+);
 
 /**
  * @swagger
@@ -153,7 +159,12 @@ router.put("/aips/:id/visibility", protect, sipController.updateAIPVisibility);
  *       403:
  *         description: Access denied
  */
-router.get("/dip/:id/export", protect, dipController.exportDIP);
+router.get(
+  "/dip/:id/export",
+  protect,
+  logAction("export"),
+  dipController.exportDIP
+);
 
 /**
  * @swagger
@@ -182,6 +193,11 @@ router.get("/dip/:id/export", protect, dipController.exportDIP);
  *       403:
  *         description: Access denied
  */
-router.get("/aips/:id/files/:fileId", protect, dipController.serveFile);
+router.get(
+  "/aips/:id/files/:fileId",
+  protect,
+  logAction("download"),
+  dipController.serveFile
+);
 
 module.exports = router;

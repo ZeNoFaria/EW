@@ -14,6 +14,14 @@ const entryRoutes = require("./routes/entryRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const authRoutes = require("./routes/authRoutes");
 const sipRoutes = require("./routes/sipRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const publicRoutes = require("./routes/publicRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const timelineRoutes = require("./routes/timelineRoutes");
+const taxonomyRoutes = require("./routes/taxonomyRoutes");
+const newsRoutes = require("./routes/newsRoutes");
+const userRoutes = require("./routes/userRoutes");
+const socialRoutes = require("./routes/socialRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,11 +74,20 @@ mongoose
   })
   .catch((err) => console.error("Error connecting to MongoDB:", err));
 
-// Routes
+//Routes
 app.use("/api/entries", entryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/sip", sipRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/timeline", timelineRoutes);
+app.use("/api/taxonomy", taxonomyRoutes);
+app.use("/api/news", newsRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/social", socialRoutes);
+
 app.use(
   "/api-docs",
   (req, res, next) => {
@@ -111,11 +128,12 @@ const initializeData = async () => {
     const Entry = require("./models/entrySchema");
     const Tag = require("./models/tagSchema");
     const User = require("./models/userSchema");
+    const Taxonomy = require("./models/taxonomySchema"); // Adicionar
     const bcrypt = require("bcryptjs");
 
     const categoryCount = await Category.countDocuments();
     const userCount = await User.countDocuments();
-
+    const taxonomyCount = await Taxonomy.countDocuments(); // Adicionar
     // Create admin user if none exists
     if (userCount === 0) {
       console.log("Creating admin user...");
@@ -141,6 +159,55 @@ const initializeData = async () => {
           throw err;
         }
       }
+    }
+
+    if (taxonomyCount === 0) {
+      console.log("Inicializando taxonomias básicas...");
+
+      await Taxonomy.insertMany([
+        {
+          name: "Viagem",
+          slug: "viagem",
+          description: "Viagens e experiências turísticas",
+          color: "#28a745",
+          icon: "fas fa-plane",
+          level: 0,
+        },
+        {
+          name: "Desporto",
+          slug: "desporto",
+          description: "Atividades desportivas e exercício",
+          color: "#007bff",
+          icon: "fas fa-running",
+          level: 0,
+        },
+        {
+          name: "Trabalho",
+          slug: "trabalho",
+          description: "Atividades profissionais",
+          color: "#6c757d",
+          icon: "fas fa-briefcase",
+          level: 0,
+        },
+        {
+          name: "Pessoal",
+          slug: "pessoal",
+          description: "Vida pessoal e momentos especiais",
+          color: "#dc3545",
+          icon: "fas fa-heart",
+          level: 0,
+        },
+        {
+          name: "Educação",
+          slug: "educacao",
+          description: "Estudos e aprendizagem",
+          color: "#ffc107",
+          icon: "fas fa-graduation-cap",
+          level: 0,
+        },
+      ]);
+
+      console.log("Taxonomias básicas criadas!");
     }
 
     if (categoryCount === 0) {

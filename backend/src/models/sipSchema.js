@@ -27,22 +27,20 @@ const sipSchema = new mongoose.Schema(
       },
       titulo: { type: String, required: true },
       tipo: {
-        type: String,
-        enum: [
-          "foto",
-          "jantar",
-          "passeio",
-          "viagem",
-          "treino",
-          "academico",
-          "trabalho",
-          "pessoal",
-        ],
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Taxonomy",
         required: true,
       },
+      tags: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Taxonomy",
+        },
+      ],
+      searchableContent: String,
       descricao: String,
       localizacao: String,
-      tags: [String],
+      // Remover esta linha duplicada: tags: [String],
     },
 
     // Estado do pacote
@@ -78,5 +76,11 @@ const sipSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+sipSchema.index({
+  "metadata.titulo": "text",
+  "metadata.descricao": "text",
+  searchableContent: "text",
+});
 
 module.exports = mongoose.model("SIP", sipSchema);
