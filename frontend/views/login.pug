@@ -1,0 +1,23 @@
+extends layout
+
+block content
+  h1 Login
+
+  if error
+    p.error= error
+
+  form(action="/auth/login" method="POST")
+    div
+      label(for="username") Username
+      input#username(type="text" name="username" required)
+    div
+      label(for="password") Password
+      input#password(type="password" name="password" required)
+    div
+      button(type="submit") Login
+
+  hr
+  p
+    a(href="/auth/google") Login with Google
+    |  | 
+    a(href="/auth/facebook") Login with Facebook

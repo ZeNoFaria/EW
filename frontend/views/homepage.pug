@@ -6,9 +6,11 @@ block content
       h3= siteName || "My Digital Diary"
       div
         if user
-          button.btn= user.name
+          a.btn(href="/dashboard") Dashboard
+          a.btn(href="/auth/logout") Logout
         else
-          button.btn Login
+          a.btn(href="/auth/login") Login
+          a.btn(href="/auth/register") Register
 
     .nav
       ul

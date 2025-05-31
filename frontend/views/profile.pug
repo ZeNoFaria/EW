@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  h1 Edit Profile
+  form(action="/profile" method="POST")
+    div
+      label(for="email") Email
+      input#email(type="email" name="email" value=user.email required)
+    div
+      label(for="name") Name
+      input#name(type="text" name="name" value=user.name required)
+    div
+      button(type="submit") Save changes

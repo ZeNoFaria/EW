@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1 Dashboard
+
+  p Welcome, #{user.username}
+  ul
+    li: a(href="/items/create") Create Item
+    li: a(href="/profile") Edit Profile
+    li: a(href="/auth/logout") Logout

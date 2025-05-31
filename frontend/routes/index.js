@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var axios = require('axios');
+const passport = require('passport');
 
 // Fix API URL - remove REACT_APP_ prefix for Node.js
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
@@ -681,6 +682,48 @@ router.get('/tag/:slug', async (req, res) => {
   }
 });
 
+
+// Render login/register
+router.get("/login", (req, res) => res.render("login"));
+router.get("/register", (req, res) => res.render("register"));
+
+// Handle form submissions
+router.post("/login", async (req, res) => {
+  try {
+    const response = await authController.loginViaForm(req.body);
+    // Aqui assumimos que authController.loginViaForm retorna { token, user }
+    res.cookie("token", response.token, { httpOnly: true });
+    res.redirect("/dashboard");
+  } catch (err) {
+    res.render("login", { error: err.message });
+  }
+});
+
+router.post("/register", async (req, res) => {
+  try {
+    const response = await authController.registerViaForm(req.body);
+    res.cookie("token", response.token, { httpOnly: true });
+    res.redirect("/dashboard");
+  } catch (err) {
+    res.render("register", { error: err.message });
+  }
+});
+
+router.get("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.redirect("/login");
+});
+
+// Google and Facebook login
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get("/google/callback", passport.authenticate("google", {
+  failureRedirect: "/login",
+}), authController.oauthSuccess);
+
+router.get("/facebook", passport.authenticate("facebook"));
+router.get("/facebook/callback", passport.authenticate("facebook", {
+  failureRedirect: "/login",
+}), authController.oauthSuccess);
 
 
 // Item detail page (alternative route for the Portuguese template)
