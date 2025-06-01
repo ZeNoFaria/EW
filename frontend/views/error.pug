@@ -1,26 +1,13 @@
 extends layout
 
 block content
-  .mockup
-    .mockup-header
-      h3= siteName
-      div
-        if user
-          button.btn= user.name
-        else
-          button.btn Login
-
-    .nav
-      ul
-        each item in navItems || []
-          li
-            a(href=item.url, class=item.active ? "active" : "")= item.text
-
-    .mockup-body
-      .error-container
-        h2 Error
-        h3= error.status
-        p= message
-        
-        .error-actions
-          a(href="/").btn Back to Homepage
+  .container.mt-4
+    .row.justify-content-center
+      .col-md-6.text-center
+        .error-container.py-5
+          i.fas.fa-exclamation-triangle.fa-4x.text-warning.mb-4
+          h2.display-6 Error #{error.status}
+          p.lead= message
+          
+          .mt-4
+            a.btn.btn-primary(href="/") Back to Homepage

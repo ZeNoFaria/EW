@@ -1,58 +1,73 @@
 extends layout
 
 block content
-  .mockup
-    .mockup-header
-      h3= siteName || "My Digital Diary"
-      div
-        if user
-          button.btn= user.name
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-4= pageTitle || "Timeline"
+
+        // Filter section
+        .row.mb-4
+          .col-md-8
+            .input-group
+              input.form-control(type="text" placeholder=filterPlaceholder || "Filter timeline..." id="timeline-filter")
+              button.btn.btn-outline-secondary(type="button")= filterButtonText || "Filter"
+
+        // Tag filters
+        .row.mb-4
+          .col-12
+            .d-flex.flex-wrap.gap-2
+              each tag in filterTags || [{name: "All", value: "All"}]
+                button.btn.btn-outline-primary.btn-sm(onclick=`filterByTag('${tag.value}')`)= tag.name
+
+        // Timeline entries
+        if entries && entries.length > 0
+          .timeline
+            each entry in entries
+              .card.mb-4.shadow-sm
+                .card-body
+                  .row
+                    .col-md-2.text-center
+                      .badge.bg-primary.fs-6= entry.date
+                    .col-md-10
+                      h4.card-title= entry.title
+                      p.card-text= entry.excerpt
+                      
+                      if entry.tags && entry.tags.length
+                        .mb-3
+                          each tag in entry.tags
+                            span.badge.bg-secondary.me-1= tag.name || tag
+                      
+                      .d-flex.gap-2
+                        if entry.id
+                          a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`)= readMoreText || "Read More"
+                        button.btn.btn-outline-secondary.btn-sm= shareButtonText || "Share"
         else
-          button.btn Login
+          .text-center.py-5
+            i.fas.fa-clock.fa-3x.text-muted.mb-3
+            p.text-muted.fs-5= noEntriesMessage || "No entries found."
 
-    .nav
-      ul
-        each item in navItems || [{text: "Homepage", url: "homepage.html"}, {text: "Timeline", url: "#", active: true}, {text: "Categories", url: "category.html"}, {text: "Tags", url: "#"}, {text: "About", url: "#"}]
-          li
-            a(href=item.url, class=item.active ? "active" : "")= item.text
+        // Pagination
+        if pagination
+          nav.mt-4
+            ul.pagination.justify-content-center
+              li.page-item(class=!pagination.prevUrl ? 'disabled' : '')
+                a.page-link(href=pagination.prevUrl || "#") Previous
+              each page in pagination.pages || []
+                li.page-item(class=page.active ? 'active' : '')
+                  a.page-link(href=page.url)= page.number
+              li.page-item(class=!pagination.nextUrl ? 'disabled' : '')
+                a.page-link(href=pagination.nextUrl || "#") Next
 
-    .mockup-body
-      h2= pageTitle || "Timeline"
-
-      .search-box
-        input(type="text" placeholder=filterPlaceholder || "Filter timeline...")
-        button= filterButtonText || "Filter"
-
-      .tag-list#filter-tags
-        each tag in filterTags || [{name: "All", value: "All"}, {name: "Academic", value: "Academic"}, {name: "Sports", value: "Sports"}, {name: "Travel", value: "Travel"}, {name: "Personal", value: "Personal"}]
-          span.tag(onclick=`filterByTag('${tag.value}')`)= tag.name
-
-      .timeline
-        each entry in entries || []
-          .timeline-item
-            .timeline-date= entry.date
-            h4= entry.title
-            p= entry.excerpt
-            .tag-list
-              each tag in entry.tags || []
-                span.tag= tag.name
-            button.btn
-              if entry.id
-                a(href=`/entry/${entry.id}`) #{readMoreText || "Read More"}
-              else
-                | #{readMoreText || "Read More"}
-            button.btn.btn-secondary= shareButtonText || "Share"
-
-      if entries && entries.length === 0
-        p.no-entries= noEntriesMessage || "No entries found."
-
-      if pagination
-        .pagination
-          a(href=pagination.prevUrl || "#") &laquo;
-          each page in pagination.pages || []
-            a(href=page.url, class=page.active ? "active" : "")= page.number
-          a(href=pagination.nextUrl || "#") &raquo;
-
+block scripts
   if scripts && scripts.length > 0
     each script in scripts
       script(src=script)
+  script.
+    function filterByTag(tagValue) {
+      if (tagValue === 'All') {
+        window.location.href = '/timeline';
+      } else {
+        window.location.href = `/tag/${tagValue.toLowerCase().replace(/\s+/g, '-')}`;
+      }
+    }

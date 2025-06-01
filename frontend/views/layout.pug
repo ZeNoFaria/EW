@@ -1,7 +1,137 @@
 doctype html
-html
+html(lang="en")
   head
-    title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title= title || "Digital Diary"
+    
+    // Bootstrap CSS
+    link(href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", rel="stylesheet")
+    
+    // Font Awesome for icons
+    link(href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css", rel="stylesheet")
+    
+    // Custom styles
+    link(rel="stylesheet", href="/stylesheets/style.css")
+    
+    // Additional stylesheets
+    if scripts
+      each script in scripts
+        if script.endsWith('.css')
+          link(rel="stylesheet", href=`/${script}`)
+
   body
-    block content
+    // Main Header - Site branding and auth
+    header.bg-dark.text-white.shadow
+      .container-fluid
+        .row.align-items-center.py-3
+          .col-md-6
+            a.navbar-brand.text-white.text-decoration-none(href="/")
+              i.fas.fa-book.me-2
+              span.h3.mb-0= siteName || "Digital Diary"
+          
+          .col-md-6.text-end
+            // Authentication buttons
+            if isAuthenticated && user
+              .dropdown
+                a.btn.btn-outline-light.dropdown-toggle(href="#", role="button", data-bs-toggle="dropdown")
+                  if user.avatar
+                    img.rounded-circle.me-2(src=user.avatar, width="24", height="24", alt="Profile")
+                  = user.username
+                ul.dropdown-menu.dropdown-menu-end
+                  li
+                    a.dropdown-item(href="/auth/profile")
+                      i.fas.fa-user.me-2
+                      | Profile
+                  li
+                    a.dropdown-item(href="/dashboard")
+                      i.fas.fa-tachometer-alt.me-2
+                      | Dashboard
+                  li
+                    hr.dropdown-divider
+                  li
+                    a.dropdown-item(href="/auth/logout")
+                      i.fas.fa-sign-out-alt.me-2
+                      | Logout
+            else
+              .btn-group
+                a.btn.btn-outline-light.btn-sm(href="/auth/login")
+                  i.fas.fa-sign-in-alt.me-1
+                  | Login
+                a.btn.btn-light.btn-sm(href="/auth/register")
+                  i.fas.fa-user-plus.me-1
+                  | Register
+
+    // Navigation Tabs
+    nav.bg-light.border-bottom
+      .container-fluid
+        .navbar.navbar-expand-lg.navbar-light.p-0
+          button.navbar-toggler(type="button", data-bs-toggle="collapse", data-bs-target="#navbarNav")
+            span.navbar-toggler-icon
+          
+          #navbarNav.collapse.navbar-collapse
+            ul.navbar-nav
+              if navItems
+                each item in navItems
+                  li.nav-item
+                    a.nav-link.px-4.py-3(href=item.url, class=item.active ? 'active bg-primary text-white' : 'text-dark')
+                      = item.text
+
+    // Main content
+    main.min-vh-100
+      // Global messages/alerts
+      if message
+        .container.mt-3
+          .alert.alert-success.alert-dismissible.fade.show(role="alert")
+            i.fas.fa-check-circle.me-2
+            = message
+            button.btn-close(type="button", data-bs-dismiss="alert")
+      
+      if error
+        .container.mt-3
+          .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+            i.fas.fa-exclamation-triangle.me-2
+            = error
+            button.btn-close(type="button", data-bs-dismiss="alert")
+      
+      // Page content
+      block content
+
+    // Footer
+    footer.bg-dark.text-light.py-4.mt-5
+      .container
+        .row
+          .col-md-6
+            h5.text-primary= siteName || "Digital Diary"
+            p.mb-0 A personal digital diary to capture and organize your memories.
+          .col-md-3
+            h6 Quick Links
+            ul.list-unstyled
+              li: a.text-light.text-decoration-none(href="/") Home
+              li: a.text-light.text-decoration-none(href="/timeline") Timeline
+              li: a.text-light.text-decoration-none(href="/categories") Categories
+              li: a.text-light.text-decoration-none(href="/tags") Tags
+          .col-md-3
+            h6 Connect
+            .social-links
+              a.text-light.me-3(href="#", aria-label="Facebook")
+                i.fab.fa-facebook
+              a.text-light.me-3(href="#", aria-label="Twitter")
+                i.fab.fa-twitter
+              a.text-light.me-3(href="#", aria-label="Instagram")
+                i.fab.fa-instagram
+        hr.my-4
+        .text-center
+          p.mb-0.small &copy; #{new Date().getFullYear()} Digital Diary. All rights reserved.
+
+    // Bootstrap JS
+    script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js")
+    
+    // Custom scripts
+    if scripts
+      each script in scripts
+        if script.endsWith('.js')
+          script(src=`/${script}`)
+    
+    // Additional scripts block
+    block scripts

@@ -1,10 +1,45 @@
 extends layout
 
 block content
-  h1 Dashboard
-
-  p Welcome, #{user.username}
-  ul
-    li: a(href="/items/create") Create Item
-    li: a(href="/profile") Edit Profile
-    li: a(href="/auth/logout") Logout
+  .container.mt-4
+    .row
+      .col-md-8.offset-md-2
+        h1.mb-4 Dashboard
+        p.lead Welcome, #{user.username}!
+        
+        .row
+          .col-md-6.mb-3
+            .card
+              .card-body
+                h5.card-title
+                  i.fas.fa-plus.me-2
+                  | Create Content
+                p.card-text Start writing your diary entries.
+                a.btn.btn-primary(href="/items/create") Create New Entry
+          
+          .col-md-6.mb-3
+            .card
+              .card-body
+                h5.card-title
+                  i.fas.fa-user.me-2
+                  | Profile
+                p.card-text Manage your account settings.
+                a.btn.btn-outline-secondary(href="/auth/profile") Edit Profile
+          
+          .col-md-6.mb-3
+            .card
+              .card-body
+                h5.card-title
+                  i.fas.fa-chart-bar.me-2
+                  | Statistics
+                p.card-text View your writing statistics.
+                a.btn.btn-outline-info(href="/stats") View Stats
+          
+          .col-md-6.mb-3
+            .card
+              .card-body
+                h5.card-title
+                  i.fas.fa-sign-out-alt.me-2
+                  | Logout
+                p.card-text Sign out of your account.
+                a.btn.btn-outline-danger(href="/auth/logout") Logout

@@ -1,65 +1,99 @@
 extends layout
 
 block content
-  .mockup
-    .mockup-header
-      h3= siteName || "My Digital Diary"
-      div
-        if user
-          a.btn(href="/dashboard") Dashboard
-          a.btn(href="/auth/logout") Logout
+  .container.mt-4
+    // Hero section
+    .row.mb-5
+      .col-12.text-center
+        h2.display-4= welcomeHeader || "Welcome to My Digital Diary"
+        p.lead= welcomeMessage || "This is my personal digital space where I share my thoughts, experiences, and memories."
+
+    // Search section
+    .row.mb-4
+      .col-md-8.offset-md-2
+        .search-box
+          .input-group
+            input.form-control(type="text" placeholder=searchPlaceholder || "Search my diary..." id="search-input")
+            button.btn.btn-primary(onclick="performSearch()")
+              i.fas.fa-search.me-2
+              = searchButtonText || "Search"
+
+    // Filter by tags section
+    .row.mb-4
+      .col-12
+        h3.mb-3 Filter by Tag
+        .tag-list#filter-tags
+          .btn.btn-outline-secondary.me-2.mb-2(onclick="filterByTag('All')") All
+          each tag in allTags || []
+            .btn.btn-outline-primary.me-2.mb-2(onclick=`filterByTag('${tag.name}')`)= tag.name
+
+    // Recent entries section
+    .row
+      .col-12
+        h3.mb-4= entriesHeader || "Recent Entries"
+        
+        if entries && entries.length > 0
+          .timeline
+            each entry in entries
+              .card.mb-4.shadow-sm
+                .card-body
+                  .row
+                    .col-md-2.text-center
+                      .timeline-date.badge.bg-primary.fs-6= entry.date
+                    .col-md-10
+                      h4.card-title= entry.title
+                      p.card-text= entry.excerpt
+                      
+                      // Tags
+                      if entry.tags && entry.tags.length
+                        .mb-3
+                          each tag in entry.tags
+                            if tag && tag.name
+                              span.badge.bg-secondary.me-1= tag.name
+                      
+                      // Read more button
+                      if entry.id
+                        a.btn.btn-outline-primary(href=`/entry/${entry.id}`)
+                          = readMoreText || "Read More"
+                          i.fas.fa-arrow-right.ms-2
+                      else
+                        button.btn.btn-outline-secondary(disabled style="opacity: 0.5")
+                          = readMoreText || "Read More (No ID)"
         else
-          a.btn(href="/auth/login") Login
-          a.btn(href="/auth/register") Register
+          .text-center.py-5
+            i.fas.fa-book-open.fa-3x.text-muted.mb-3
+            p.text-muted.fs-5= noEntriesMessage || "No entries found."
+            if isAuthenticated
+              a.btn.btn-primary(href="/entry/new") Create Your First Entry
 
-    .nav
-      ul
-        each item in navItems || [{text: "Homepage", url: "#", active: true}, {text: "Categories", url: "category.html"}, {text: "Tags", url: "#"}, {text: "About", url: "#"}]
-          li
-            a(href=item.url, class=item.active ? "active" : "")= item.text
+    // DEBUG section (only in development)
+    if process.env.NODE_ENV === 'development'
+      .row.mt-5
+        .col-12
+          details.bg-light.p-3.rounded
+            summary.fw-bold Debug: Entry Data
+            pre.mt-2.small(style="white-space: pre-wrap;")= JSON.stringify(entries, null, 2)
 
-    .mockup-body
-      h2= welcomeHeader || "Welcome to My Digital Diary"
-      p= welcomeMessage || "This is my personal digital space where I share my thoughts, experiences, and memories."
-
-      .search-box
-        input(type="text" placeholder=searchPlaceholder || "Search my diary..." id="search-input")
-        button(onclick="performSearch()")= searchButtonText || "Search"
-
-      h3 Filter by Tag
-      .tag-list#filter-tags
-        span.tag(onclick="filterByTag('All')") All
-        each tag in allTags || []
-          span.tag(onclick=`filterByTag('${tag.name}')`)= tag.name
-
-      h3= entriesHeader || "Recent Entries"
-      .timeline
-        each entry in entries || []
-          .timeline-item
-            .timeline-date= entry.date
-            h4= entry.title
-            p= entry.excerpt
-            .tag-list
-              if entry.tags && entry.tags.length
-                each tag in entry.tags
-                  if tag && tag.name
-                    span.tag= tag.name
-            //- Use the MongoDB _id (converted to string in formatEntries)
-            if entry.id
-              a.btn(href=`/entry/${entry.id}`)= readMoreText || "Read More"
-            else
-              //- Show a disabled button and log the issue
-              button.btn(disabled style="opacity: 0.5" onclick=`console.log('No ID found for entry:', this.dataset.entry)` data-entry=JSON.stringify(entry))= readMoreText || "Read More (No ID)"
-
-      if entries && entries.length === 0
-        p.no-entries= noEntriesMessage || "No entries found."
-
-      //- DEBUG: Show entry data in development
-      if process.env.NODE_ENV === 'development'
-        details(style="margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;")
-          summary Debug: Entry Data
-          pre(style="white-space: pre-wrap; font-size: 12px;")= JSON.stringify(entries, null, 2)
-
-  if scripts && scripts.length > 0
-    each script in scripts
-      script(src=script)
+block scripts
+  script.
+    function performSearch() {
+      const query = document.getElementById('search-input').value;
+      if (query.trim()) {
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+      }
+    }
+    
+    function filterByTag(tagName) {
+      if (tagName === 'All') {
+        window.location.href = '/timeline';
+      } else {
+        window.location.href = `/tag/${tagName.toLowerCase().replace(/\s+/g, '-')}`;
+      }
+    }
+    
+    // Allow search on Enter key
+    document.getElementById('search-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });

@@ -1,20 +1,71 @@
 extends layout
 
 block content
-  h1 Register
+  .container
+    .row.justify-content-center
+      .col-md-6.col-lg-4
+        .card.shadow
+          .card-body
+            h2.card-title.text-center.mb-4 Register
+            
+            if error
+              .alert.alert-danger(role="alert")= error
+            
+            if message
+              .alert.alert-success(role="alert")= message
 
-  if error
-    p.error= error
+            form(action="/auth/register" method="POST")
+              .mb-3
+                label.form-label(for="username") Username
+                input.form-control#username(
+                  type="text" 
+                  name="username" 
+                  placeholder="Choose a username"
+                  required
+                )
+              
+              .mb-3
+                label.form-label(for="email") Email
+                input.form-control#email(
+                  type="email" 
+                  name="email" 
+                  placeholder="Enter your email"
+                  required
+                )
+              
+              .mb-3
+                label.form-label(for="password") Password
+                input.form-control#password(
+                  type="password" 
+                  name="password" 
+                  placeholder="Choose a password"
+                  required
+                )
+              
+              .mb-3
+                label.form-label(for="confirmPassword") Confirm Password
+                input.form-control#confirmPassword(
+                  type="password" 
+                  name="confirmPassword" 
+                  placeholder="Confirm your password"
+                  required
+                )
+              
+              .d-grid
+                button.btn.btn-primary(type="submit") Register
 
-  form(action="/auth/register" method="POST")
-    div
-      label(for="username") Username
-      input#username(type="text" name="username" required)
-    div
-      label(for="email") Email
-      input#email(type="email" name="email" required)
-    div
-      label(for="password") Password
-      input#password(type="password" name="password" required)
-    div
-      button(type="submit") Register
+            hr.my-4
+
+            .d-grid.gap-2
+              a.btn.btn-outline-danger(href="/auth/google")
+                i.fab.fa-google.me-2
+                | Sign up with Google
+              
+              a.btn.btn-outline-primary(href="/auth/facebook")
+                i.fab.fa-facebook-f.me-2
+                | Sign up with Facebook
+
+            .text-center.mt-3
+              p.mb-0
+                | Already have an account? 
+                a(href="/auth/login") Login here
