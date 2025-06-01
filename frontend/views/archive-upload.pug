@@ -1,0 +1,175 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.justify-content-center
+      .col-md-8
+        .card.shadow
+          .card-header.text-center
+            h3.mb-1
+              i.fas.fa-upload.me-2
+              | Upload SIP Package
+            p.text-muted.mb-0 Submit your Submission Information Package for digital preservation
+
+          .card-body
+            form#sipUploadForm(enctype="multipart/form-data")
+              .row.mb-4
+                .col-12
+                  h5.mb-3
+                    i.fas.fa-info-circle.me-2
+                    | Package Information
+                
+                .col-md-6.mb-3
+                  label.form-label(for="titulo") Title *
+                  input.form-control#titulo(type="text", name="titulo", required)
+                  .form-text Brief descriptive title for this package
+                
+                .col-md-6.mb-3
+                  label.form-label(for="tipo") Content Type *
+                  select.form-select#tipo(name="tipo", required)
+                    option(value="") Select type...
+                    option(value="text") Text Documents
+                    option(value="image") Images/Photos
+                    option(value="audio") Audio Files
+                    option(value="video") Video Files
+                    option(value="mixed") Mixed Media
+                    option(value="dataset") Research Data
+                    option(value="software") Software/Code
+                
+                .col-12.mb-3
+                  label.form-label(for="descricao") Description *
+                  textarea.form-control#descricao(name="descricao", rows="3", required)
+                  .form-text Detailed description of the package contents
+
+              .row.mb-4
+                .col-12
+                  h5.mb-3
+                    i.fas.fa-file-archive.me-2
+                    | Package Files
+                
+                .col-12.mb-3
+                  label.form-label(for="sipFile") SIP Archive File *
+                  input.form-control#sipFile(type="file", name="sipFile", accept=".zip,.tar,.tar.gz,.7z", required)
+                  .form-text Upload a compressed archive (.zip, .tar.gz, .7z) containing your digital materials
+
+              .row.mb-4
+                .col-12
+                  h5.mb-3
+                    i.fas.fa-tags.me-2
+                    | Classification & Access
+
+                .col-md-6.mb-3
+                  label.form-label(for="tags") Tags
+                  input.form-control#tags(type="text", name="tags", placeholder="tag1, tag2, tag3")
+                  .form-text Comma-separated tags for categorization
+
+                .col-md-6.mb-3
+                  .form-check
+                    input.form-check-input#isPublic(type="checkbox", name="isPublic")
+                    label.form-check-label(for="isPublic")
+                      strong Make publicly accessible
+                    .form-text Allow public discovery and access to this package
+
+              .row.mb-3#uploadProgress(style="display: none;")
+                .col-12
+                  .progress
+                    .progress-bar.progress-bar-striped.progress-bar-animated(role="progressbar", style="width: 0%")
+                  small.text-muted.mt-1 Uploading and processing package...
+
+              .row
+                .col-12.text-center
+                  button.btn.btn-primary.btn-lg.me-3#submitBtn(type="submit")
+                    i.fas.fa-upload.me-2
+                    | Upload SIP Package
+                  a.btn.btn-outline-secondary(href="/archive")
+                    i.fas.fa-times.me-2
+                    | Cancel
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('sipUploadForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const progressDiv = document.getElementById('uploadProgress');
+      const progressBar = progressDiv.querySelector('.progress-bar');
+
+      // CORRIGIDO - Token do servidor para o cliente
+      const authToken = '#{session && session.token ? session.token : ""}';
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validar se o arquivo foi selecionado
+        const fileInput = document.getElementById('sipFile');
+        if (!fileInput.files || !fileInput.files[0]) {
+          alert('Please select a SIP file to upload.');
+          return;
+        }
+
+        // Verificar se tem token de autenticação
+        if (!authToken) {
+          alert('You need to be logged in to upload files.');
+          window.location.href = '/auth/login?error=Please login to upload content';
+          return;
+        }
+
+        const formData = new FormData(form);
+        
+        // Show progress
+        progressDiv.style.display = 'block';
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+        
+        try {
+          // ENDPOINT CORRETO: /api/sip/ingest
+          const response = await fetch('/api/sip/ingest', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Authorization': `Bearer ${authToken}`
+            }
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success !== false) {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('bg-success');
+            
+            // Success message
+            const successMessage = result.message || 'SIP uploaded and processed successfully';
+            
+            // Redirect para a lista de AIPs com mensagem de sucesso
+            setTimeout(() => {
+              window.location.href = `/archive/aips?message=${encodeURIComponent(successMessage)}`;
+            }, 1500);
+          } else {
+            throw new Error(result.message || result.error || 'Upload failed');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          
+          let errorMessage = 'Unknown error occurred';
+          if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          alert(`Error uploading SIP package: ${errorMessage}. Please try again.`);
+          
+          // Reset form
+          progressDiv.style.display = 'none';
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload SIP Package';
+        }
+      });
+
+      // File size validation
+      document.getElementById('sipFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.size > 500 * 1024 * 1024) { // 500MB
+          alert('File size exceeds 500MB limit. Please compress or split your package.');
+          e.target.value = '';
+        }
+      });
+    });

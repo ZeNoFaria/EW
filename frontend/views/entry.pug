@@ -3,90 +3,136 @@ extends layout
 block content
   .container.mt-4
     if entry
-      article.entry
-        header.entry-header.mb-4
-          h1.entry-title= entry.title
-          .entry-meta.text-muted.mb-3
-            .d-flex.flex-wrap.align-items-center.gap-3
+      .row.justify-content-center
+        .col-md-8
+          .card.shadow
+            .card-header.d-flex.justify-content-between.align-items-center
               div
-                i.fas.fa-calendar.me-1
-                time= entry.date
-              
-              if entry.category && entry.category !== "Uncategorized"
-                div
-                  i.fas.fa-folder.me-1
-                  span.badge.bg-primary= entry.category
-              
+                h1.h3.mb-1= entry.title
+                .d-flex.align-items-center.text-muted
+                  i.fas.fa-calendar.me-1
+                  small= entry.date
+                  if entry.category
+                    span.badge.bg-secondary.ms-2= entry.category
+              div
+                if entry.isPublic
+                  span.badge.bg-success.fs-6
+                    i.fas.fa-globe.me-1
+                    | Public
+                else
+                  span.badge.bg-secondary.fs-6
+                    i.fas.fa-lock.me-1
+                    | Private
+
+            .card-body
+              // Content
+              .mb-4
+                p.lead= entry.content
+
+              // Tags
               if entry.tags && entry.tags.length > 0
-                .mb-3
+                .mb-4
+                  h6.mb-2 Tags:
                   each tag in entry.tags
-                    - var tagName = typeof tag === 'string' ? tag : (tag.name || tag)
-                    - var tagSlug = tagName.toLowerCase().replace(/\s+/g, '-')
-                    a.badge.bg-secondary.text-decoration-none.me-1(href=`/timeline?tag=${tagSlug}`)= tagName
+                    a.badge.bg-light.text-dark.text-decoration-none.me-2.mb-1(
+                      href=`${isPublicArea ? '/public' : '/timeline'}?tag=${typeof tag === 'string' ? tag.replace(/\s+/g, '-').toLowerCase() : tag.slug}`
+                    )
+                      = typeof tag === 'string' ? tag : tag.name
 
-        .entry-content.mb-4
-          if entry.content
-            .content-body!= entry.content.replace(/\n/g, '<br>')
-          else
-            p.text-muted No content available.
+              // Actions (apenas para donos ou admins)
+              if isAuthenticated && !isPublicArea
+                .border-top.pt-3
+                  h6.mb-3 Actions:
+                  .d-flex.gap-2.flex-wrap
+                    a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}/edit`)
+                      i.fas.fa-edit.me-1
+                      | Edit Entry
+                    
+                    // Toggle visibility
+                    form.d-inline(action=`/entry/${entry.id}/visibility`, method="POST")
+                      input(type="hidden", name="isPublic", value=entry.isPublic ? "false" : "true")
+                      button.btn.btn-outline-secondary.btn-sm(type="submit")
+                        i(class=entry.isPublic ? "fas fa-eye-slash" : "fas fa-eye").me-1
+                        = entry.isPublic ? "Make Private" : "Make Public"
+                    
+                    button.btn.btn-outline-danger.btn-sm(type="button", data-bs-toggle="modal", data-bs-target="#deleteModal")
+                      i.fas.fa-trash.me-1
+                      | Delete
 
-        // Action buttons
-        if isAuthenticated && user
-          .entry-actions.mb-4
-            .btn-group
-              a.btn.btn-outline-primary(href=`/entry/${entry.id}/edit`)
-                i.fas.fa-edit.me-1
-                | Edit
-              button.btn.btn-outline-secondary(onclick=`shareEntry('${entry.id}', '${entry.title}')`)
-                i.fas.fa-share.me-1
-                | Share
-              button.btn.btn-outline-danger(onclick=`confirmDelete('${entry.id}', '${entry.title}')`)
-                i.fas.fa-trash.me-1
-                | Delete
+                    // Social sharing
+                    .dropdown.d-inline
+                      button.btn.btn-outline-success.btn-sm.dropdown-toggle(type="button", data-bs-toggle="dropdown")
+                        i.fas.fa-share.me-1
+                        | Share
+                      ul.dropdown-menu
+                        li: a.dropdown-item(href="#", onclick=`shareToFacebook('${entry.id}')`)
+                          i.fab.fa-facebook.me-2
+                          | Facebook
+                        li: a.dropdown-item(href="#", onclick=`shareToTwitter('${entry.id}')`)
+                          i.fab.fa-twitter.me-2
+                          | Twitter
 
-        // Navigation
-        .entry-navigation.mb-4
-          .d-flex.justify-content-between
-            a.btn.btn-outline-secondary(href="/timeline")
-              i.fas.fa-arrow-left.me-1
-              | Back to Timeline
-            a.btn.btn-primary(href="/entry/new")
-              i.fas.fa-plus.me-1
-              | New Entry
-
+        .col-md-4
+          // Sidebar with related info
+          .card.mb-3
+            .card-header
+              h6.mb-0
+                i.fas.fa-info-circle.me-2
+                | Entry Details
+            .card-body
+              .mb-2
+                strong Category:
+                span.ms-2= entry.category || "Uncategorized"
+              .mb-2
+                strong Created:
+                span.ms-2= entry.date
+              .mb-2
+                strong Visibility:
+                span.ms-2
+                  span.badge(class=entry.isPublic ? "bg-success" : "bg-secondary")
+                    = entry.isPublic ? "Public" : "Private"
+              if entry.tags && entry.tags.length > 0
+                .mb-2
+                  strong Tags:
+                  span.ms-2= entry.tags.length
     else
-      .text-center.py-5
-        i.fas.fa-exclamation-triangle.fa-3x.text-muted.mb-3
-        h3.text-muted Entry not found
-        p.text-muted The entry you're looking for doesn't exist or has been removed.
-        a.btn.btn-primary(href="/") Go Home
+      .row.justify-content-center
+        .col-md-6.text-center
+          .card
+            .card-body.py-5
+              i.fas.fa-exclamation-triangle.fa-3x.text-warning.mb-3
+              h4.text-muted Entry Not Found
+              p.text-muted= errorMessage || "The requested entry could not be found."
+              a.btn.btn-primary(href=isPublicArea ? "/" : "/dashboard") 
+                i.fas.fa-home.me-2
+                | Go Home
+
+    // Delete confirmation modal
+    if isAuthenticated && !isPublicArea && entry
+      .modal.fade#deleteModal(tabindex="-1")
+        .modal-dialog
+          .modal-content
+            .modal-header
+              h5.modal-title Confirm Deletion
+              button.btn-close(type="button", data-bs-dismiss="modal")
+            .modal-body
+              p Are you sure you want to delete this entry? This action cannot be undone.
+              strong= entry.title
+            .modal-footer
+              button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+              form.d-inline(action=`/entry/${entry.id}/delete`, method="POST")
+                button.btn.btn-danger(type="submit") Delete Entry
 
 block scripts
   script.
-    function shareEntry(id, title) {
-      if (navigator.share) {
-        navigator.share({
-          title: title,
-          text: `Check out this diary entry: ${title}`,
-          url: `${window.location.origin}/entry/${id}`
-        }).catch(err => console.log('Error sharing:', err));
-      } else {
-        const url = `${window.location.origin}/entry/${id}`;
-        navigator.clipboard.writeText(url).then(() => {
-          alert('Link copied to clipboard!');
-        }).catch(() => {
-          prompt('Copy this link:', url);
-        });
-      }
+    // Social sharing functions
+    function shareToFacebook(entryId) {
+      const url = `${window.location.origin}/entry/${entryId}`;
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
     }
     
-    function confirmDelete(id, title) {
-      if (confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
-        // Create a form to submit DELETE request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/entry/${id}/delete`;
-        document.body.appendChild(form);
-        form.submit();
-      }
+    function shareToTwitter(entryId) {
+      const url = `${window.location.origin}/entry/${entryId}`;
+      const text = 'Check out this diary entry';
+      window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
     }

@@ -1,0 +1,176 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-md-8
+        h2.mb-3
+          i.fas.fa-archive.me-2
+          | Digital Archive Management
+        p.text-muted Manage your digital preservation packages (SIP/AIP/DIP) and archived materials
+      .col-md-4.text-end
+        .btn-group
+          a.btn.btn-primary(href="/archive/upload")
+            i.fas.fa-upload.me-2
+            | Upload SIP
+          a.btn.btn-outline-secondary(href="/archive/aips")
+            i.fas.fa-list.me-2
+            | Browse All
+
+    // Quick stats
+    .row.mb-4
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;")
+          .card-body
+            i.fas.fa-upload.fa-2x.mb-2
+            h3.mb-1= recentAips ? recentAips.length : 0
+            small Recent Uploads
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;")
+          .card-body
+            i.fas.fa-archive.fa-2x.mb-2
+            h3.mb-1 Total
+            small Archive Items
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;")
+          .card-body
+            i.fas.fa-globe.fa-2x.mb-2
+            h3.mb-1 Public
+            small Shared Items
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;")
+          .card-body
+            i.fas.fa-download.fa-2x.mb-2
+            h3.mb-1 Ready
+            small For Download
+
+    .row
+      .col-md-8
+        // Recent AIPs
+        .card.mb-4
+          .card-header.d-flex.justify-content-between.align-items-center
+            h5.mb-0
+              i.fas.fa-clock.me-2
+              | Recent Archive Items
+            a.btn.btn-outline-primary.btn-sm(href="/archive/my-uploads") View All
+          
+          .card-body
+            if recentAips && recentAips.length > 0
+              each aip in recentAips
+                .d-flex.justify-content-between.align-items-center.border-bottom.pb-3.mb-3
+                  div
+                    h6.mb-1
+                      a.text-decoration-none(href=`/archive/aip/${aip._id}`)= aip.metadata ? aip.metadata.titulo : 'Untitled'
+                    .d-flex.align-items-center.mb-1
+                      small.text-muted.me-3
+                        i.fas.fa-calendar.me-1
+                        = new Date(aip.createdAt || Date.now()).toLocaleDateString()
+                      if aip.metadata && aip.metadata.tipo
+                        span.badge.bg-secondary.me-2= aip.metadata.tipo
+                      span.badge(class=aip.status === 'ingested' ? 'bg-success' : aip.status === 'processing' ? 'bg-warning' : 'bg-secondary')= aip.status || 'pending'
+                    if aip.metadata && aip.metadata.descricao
+                      p.text-muted.small.mb-0= aip.metadata.descricao.substring(0, 80) + '...'
+                  .text-end
+                    .btn-group.btn-group-sm
+                      a.btn.btn-outline-primary(href=`/archive/aip/${aip._id}`)
+                        i.fas.fa-eye
+                      if aip.status === 'ingested'
+                        a.btn.btn-outline-success(href=`/archive/download/${aip._id}`)
+                          i.fas.fa-download
+            else
+              .text-center.py-4
+                i.fas.fa-upload.fa-3x.text-muted.mb-3
+                h6.text-muted No archive items yet
+                p.text-muted Start by uploading your first SIP package
+                a.btn.btn-primary(href="/archive/upload") Upload Now
+
+        // Quick actions
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-bolt.me-2
+              | Archive Actions
+          .card-body
+            .row
+              .col-md-6.mb-2
+                a.btn.btn-outline-primary.w-100(href="/archive/upload")
+                  i.fas.fa-upload.me-2
+                  | Upload SIP
+              .col-md-6.mb-2
+                a.btn.btn-outline-secondary.w-100(href="/archive/aips")
+                  i.fas.fa-list.me-2
+                  | Browse AIPs
+              .col-md-6.mb-2
+                a.btn.btn-outline-info.w-100(href="/archive/my-uploads")
+                  i.fas.fa-user.me-2
+                  | My Uploads
+              .col-md-6.mb-2
+                a.btn.btn-outline-success.w-100(href="/archive/public")
+                  i.fas.fa-globe.me-2
+                  | Public Archive
+
+      .col-md-4
+        // Archive workflow info
+        .card.mb-4
+          .card-header
+            h6.mb-0
+              i.fas.fa-info-circle.me-2
+              | Archive Workflow
+          .card-body
+            .timeline-sm
+              .d-flex.align-items-center.mb-3
+                .bg-primary.rounded-circle.text-white.d-flex.align-items-center.justify-content-center.me-3(style="width: 30px; height: 30px; font-size: 0.8rem;")
+                  | 1
+                div
+                  h6.mb-1 SIP Upload
+                  small.text-muted Submit your package
+              
+              .d-flex.align-items-center.mb-3
+                .bg-warning.rounded-circle.text-white.d-flex.align-items-center.justify-content-center.me-3(style="width: 30px; height: 30px; font-size: 0.8rem;")
+                  | 2
+                div
+                  h6.mb-1 Processing
+                  small.text-muted Validation & ingestion
+              
+              .d-flex.align-items-center.mb-3
+                .bg-success.rounded-circle.text-white.d-flex.align-items-center.justify-content-center.me-3(style="width: 30px; height: 30px; font-size: 0.8rem;")
+                  | 3
+                div
+                  h6.mb-1 AIP Storage
+                  small.text-muted Preserved in archive
+              
+              .d-flex.align-items-center
+                .bg-info.rounded-circle.text-white.d-flex.align-items-center.justify-content-center.me-3(style="width: 30px; height: 30px; font-size: 0.8rem;")
+                  | 4
+                div
+                  h6.mb-1 DIP Access
+                  small.text-muted Download when ready
+
+        // Taxonomy filters
+        if taxonomies && taxonomies.length > 0
+          .card
+            .card-header
+              h6.mb-0
+                i.fas.fa-tags.me-2
+                | Classification
+            .card-body
+              each taxonomy in taxonomies.slice(0, 6)
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  span= taxonomy.name
+                  span.badge.bg-light.text-dark= taxonomy.count || 0
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Animate stat cards
+      const statCards = document.querySelectorAll('.row .card');
+      statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.3s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+        }, index * 100);
+      });
+    });

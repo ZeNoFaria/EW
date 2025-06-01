@@ -1,0 +1,282 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-md-8
+        h2.mb-3
+          i.fas.fa-user.me-2
+          | My Uploads
+        p.text-muted Your personal digital preservation packages and submissions
+      .col-md-4.text-end
+        .btn-group
+          a.btn.btn-primary(href="/archive/upload")
+            i.fas.fa-upload.me-2
+            | Upload New SIP
+          a.btn.btn-outline-secondary(href="/archive/aips")
+            i.fas.fa-globe.me-2
+            | Browse All AIPs
+
+    // Summary stats
+    .row.mb-4
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;")
+          .card-body
+            i.fas.fa-archive.fa-2x.mb-2
+            h3.mb-1= myAips ? myAips.length : 0
+            small Total Uploads
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;")
+          .card-body
+            i.fas.fa-check-circle.fa-2x.mb-2
+            h3.mb-1= myAips ? myAips.filter(a => a.status === 'ingested').length : 0
+            small Ingested
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;")
+          .card-body
+            i.fas.fa-cog.fa-2x.mb-2
+            h3.mb-1= myAips ? myAips.filter(a => a.status === 'processing').length : 0
+            small Processing
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;")
+          .card-body
+            i.fas.fa-globe.fa-2x.mb-2
+            h3.mb-1= myAips ? myAips.filter(a => a.metadata && a.metadata.isPublic).length : 0
+            small Public
+
+    // Filters
+    .row.mb-4
+      .col-12
+        .card
+          .card-body
+            form.row.g-3(action="/archive/my-uploads", method="GET")
+              .col-md-4
+                input.form-control(type="text", name="search", placeholder="Search my uploads...", value=filters.search || "")
+              .col-md-3
+                select.form-select(name="status")
+                  option(value="") All Status
+                  option(value="pending", selected=filters.status === "pending") Pending
+                  option(value="processing", selected=filters.status === "processing") Processing
+                  option(value="ingested", selected=filters.status === "ingested") Ingested
+                  option(value="error", selected=filters.status === "error") Error
+              .col-md-3
+                select.form-select(name="tipo")
+                  option(value="") All Types
+                  option(value="text", selected=filters.tipo === "text") Text
+                  option(value="image", selected=filters.tipo === "image") Images
+                  option(value="audio", selected=filters.tipo === "audio") Audio
+                  option(value="video", selected=filters.tipo === "video") Video
+                  option(value="mixed", selected=filters.tipo === "mixed") Mixed
+              .col-md-2
+                .d-flex.gap-1
+                  button.btn.btn-primary(type="submit")
+                    i.fas.fa-search
+                  a.btn.btn-outline-secondary(href="/archive/my-uploads")
+                    i.fas.fa-times
+
+    // My AIPs list
+    .row
+      if myAips && myAips.length > 0
+        each aip in myAips
+          .col-12.mb-3
+            .card.shadow-sm.my-aip-card
+              .card-body
+                .row.align-items-center
+                  .col-md-8
+                    .d-flex.justify-content-between.align-items-start.mb-2
+                      div
+                        h5.mb-1
+                          a.text-decoration-none(href=`/archive/aip/${aip._id}`)= aip.metadata ? aip.metadata.titulo : 'Untitled'
+                        .d-flex.align-items-center.text-muted.mb-2
+                          i.fas.fa-calendar.me-1
+                          small.me-3= new Date(aip.createdAt || Date.now()).toLocaleDateString()
+                          if aip.metadata && aip.metadata.tipo
+                            span.badge.bg-secondary.me-2= aip.metadata.tipo
+                          span.badge(class=aip.status === 'ingested' ? 'bg-success' : aip.status === 'processing' ? 'bg-warning' : aip.status === 'error' ? 'bg-danger' : 'bg-secondary')
+                            = aip.status || 'pending'
+                      div
+                        if aip.metadata && aip.metadata.isPublic
+                          span.badge.bg-success
+                            i.fas.fa-globe.me-1
+                            | Public
+                        else
+                          span.badge.bg-secondary
+                            i.fas.fa-lock.me-1
+                            | Private
+
+                    if aip.metadata && aip.metadata.descricao
+                      p.text-muted.mb-2= aip.metadata.descricao.substring(0, 150) + (aip.metadata.descricao.length > 150 ? '...' : '')
+                    
+                    if aip.metadata && aip.metadata.tags && aip.metadata.tags.length > 0
+                      .mb-2
+                        each tag in aip.metadata.tags.slice(0, 4)
+                          span.badge.bg-light.text-dark.me-1= tag
+
+                  .col-md-4.text-end
+                    .d-flex.flex-column.gap-2
+                      .btn-group.btn-group-sm
+                        a.btn.btn-outline-primary(href=`/archive/aip/${aip._id}`, title="View Details")
+                          i.fas.fa-eye.me-1
+                          | View
+                        
+                        if aip.status === 'ingested'
+                          a.btn.btn-outline-success(href=`/archive/download/${aip._id}`, title="Download DIP")
+                            i.fas.fa-download.me-1
+                            | Download
+                        
+                        button.btn.btn-outline-secondary.dropdown-toggle(type="button", data-bs-toggle="dropdown", title="More Actions")
+                          i.fas.fa-ellipsis-h
+                        ul.dropdown-menu
+                          li
+                            a.dropdown-item(href=`/archive/aip/${aip._id}/edit`)
+                              i.fas.fa-edit.me-2
+                              | Edit Metadata
+                          li
+                            a.dropdown-item(href="#", onclick=`toggleVisibility('${aip._id}', ${aip.metadata ? aip.metadata.isPublic : false})`)
+                              i(class=aip.metadata && aip.metadata.isPublic ? "fas fa-eye-slash" : "fas fa-eye").me-2
+                              = aip.metadata && aip.metadata.isPublic ? "Make Private" : "Make Public"
+                          li: hr.dropdown-divider
+                          li
+                            a.dropdown-item.text-danger(href="#", onclick=`confirmDelete('${aip._id}')`)
+                              i.fas.fa-trash.me-2
+                              | Delete
+
+                      // Progress bar for processing items
+                      if aip.status === 'processing'
+                        .progress(style="height: 4px;")
+                          .progress-bar.progress-bar-striped.progress-bar-animated(style="width: 60%")
+                        small.text-muted Processing...
+
+                      // Size and technical info
+                      .text-muted.small
+                        if aip.tamanho
+                          i.fas.fa-weight.me-1
+                          = (aip.tamanho / 1024 / 1024).toFixed(2) + ' MB'
+                        else
+                          i.fas.fa-clock.me-1
+                          | Size calculating...
+      else
+        .col-12
+          .text-center.py-5
+            i.fas.fa-upload.fa-4x.text-muted.mb-4
+            h4.text-muted No uploads yet
+            p.text-muted Start preserving your digital materials by uploading your first SIP package
+            a.btn.btn-primary.btn-lg(href="/archive/upload")
+              i.fas.fa-upload.me-2
+              | Upload First SIP
+
+    // Pagination
+    if pagination && pagination.totalPages > 1
+      .row.mt-4
+        .col-12
+          nav(aria-label="My uploads pagination")
+            ul.pagination.justify-content-center
+              if pagination.currentPage > 1
+                li.page-item
+                  a.page-link(href=`/archive/my-uploads?page=${pagination.currentPage - 1}${filters.search ? '&search=' + encodeURIComponent(filters.search) : ''}${filters.status ? '&status=' + filters.status : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`) Previous
+              
+              - for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++)
+                li.page-item(class=i === pagination.currentPage ? 'active' : '')
+                  a.page-link(href=`/archive/my-uploads?page=${i}${filters.search ? '&search=' + encodeURIComponent(filters.search) : ''}${filters.status ? '&status=' + filters.status : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`)= i
+              
+              if pagination.currentPage < pagination.totalPages
+                li.page-item
+                  a.page-link(href=`/archive/my-uploads?page=${pagination.currentPage + 1}${filters.search ? '&search=' + encodeURIComponent(filters.search) : ''}${filters.status ? '&status=' + filters.status : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`) Next
+
+    // Bulk actions (future feature)
+    .row.mt-4
+      .col-12
+        .card.border-0.bg-light
+          .card-body.text-center.py-3
+            p.text-muted.mb-2
+              i.fas.fa-lightbulb.me-2
+              | Tip: You can make your archives publicly accessible to share them with others
+            a.btn.btn-outline-primary.btn-sm(href="/archive/help")
+              i.fas.fa-question-circle.me-1
+              | Learn More
+
+    // Delete confirmation modal
+    .modal.fade#deleteModal(tabindex="-1")
+      .modal-dialog
+        .modal-content
+          .modal-header
+            h5.modal-title Confirm Deletion
+            button.btn-close(type="button", data-bs-dismiss="modal")
+          .modal-body
+            p Are you sure you want to delete this AIP? This action cannot be undone.
+            p.fw-bold#deleteTitle
+          .modal-footer
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+            button.btn.btn-danger#confirmDeleteBtn(type="button") Delete AIP
+
+block scripts
+  script.
+    let aipToDelete = null;
+
+    function confirmDelete(aipId) {
+      aipToDelete = aipId;
+      const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+      modal.show();
+    }
+
+    function toggleVisibility(aipId, isCurrentlyPublic) {
+      if (confirm(`Make this AIP ${isCurrentlyPublic ? 'private' : 'public'}?`)) {
+        fetch(`/api/aip/${aipId}/visibility`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || '${session.token}'}`
+          },
+          body: JSON.stringify({ isPublic: !isCurrentlyPublic })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Error updating visibility');
+          }
+        })
+        .catch(error => {
+          alert('Error updating visibility');
+        });
+      }
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+      if (aipToDelete) {
+        fetch(`/api/aip/${aipToDelete}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token') || '${session.token}'}`
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Error deleting AIP');
+          }
+        })
+        .catch(error => {
+          alert('Error deleting AIP');
+        });
+      }
+    });
+
+    // Card hover effects
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.my-aip-card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+    });

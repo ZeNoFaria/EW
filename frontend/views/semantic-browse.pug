@@ -1,0 +1,253 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-3
+          i.fas.fa-compass.me-2
+          | Browse by Content Type
+        p.text-muted Navigate your digital life through semantic categories and content classifications
+
+    // Content type cards
+    .row.mb-5
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="academic")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);")
+            i.fas.fa-graduation-cap.fa-3x.mb-2
+            h5.mb-0 Academic
+            small= academicCount || 0 + " entries"
+          .card-body
+            p.small Academic work, research, studies, and educational materials.
+            if academicEntries && academicEntries.length > 0
+              each entry in academicEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No academic entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=academic") Browse Academic
+
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="personal")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);")
+            i.fas.fa-heart.fa-3x.mb-2
+            h5.mb-0 Personal
+            small= personalCount || 0 + " entries"
+          .card-body
+            p.small Personal experiences, relationships, thoughts, and daily life.
+            if personalEntries && personalEntries.length > 0
+              each entry in personalEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No personal entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=personal") Browse Personal
+
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="travel")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);")
+            i.fas.fa-plane.fa-3x.mb-2
+            h5.mb-0 Travel
+            small= travelCount || 0 + " entries"
+          .card-body
+            p.small Travel experiences, destinations, and adventure documentation.
+            if travelEntries && travelEntries.length > 0
+              each entry in travelEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No travel entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=travel") Browse Travel
+
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="professional")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);")
+            i.fas.fa-briefcase.fa-3x.mb-2
+            h5.mb-0 Professional
+            small= professionalCount || 0 + " entries"
+          .card-body
+            p.small Work-related content, career milestones, and professional development.
+            if professionalEntries && professionalEntries.length > 0
+              each entry in professionalEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No professional entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=professional") Browse Professional
+
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="creative")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333 !important;")
+            i.fas.fa-palette.fa-3x.mb-2
+            h5.mb-0 Creative
+            small= creativeCount || 0 + " entries"
+          .card-body
+            p.small Creative projects, artistic endeavors, and self-expression.
+            if creativeEntries && creativeEntries.length > 0
+              each entry in creativeEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No creative entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=creative") Browse Creative
+
+      .col-md-6.col-lg-4.mb-4
+        .card.h-100.content-type-card(data-type="health")
+          .card-header.text-center.text-white(style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333 !important;")
+            i.fas.fa-heartbeat.fa-3x.mb-2
+            h5.mb-0 Health & Wellness
+            small= healthCount || 0 + " entries"
+          .card-body
+            p.small Health tracking, wellness journey, and medical documentation.
+            if healthEntries && healthEntries.length > 0
+              each entry in healthEntries.slice(0, 3)
+                .border-bottom.pb-2.mb-2.small
+                  .fw-bold= entry.title
+                  .text-muted= entry.date
+            else
+              p.text-muted.small No health entries yet
+          .card-footer.text-center
+            a.btn.btn-outline-primary.btn-sm(href="/browse?type=health") Browse Health
+
+    // Semantic filters and tags
+    .row.mb-5
+      .col-12
+        .card
+          .card-header
+            h4.mb-0
+              i.fas.fa-filter.me-2
+              | Filter by Semantic Properties
+
+          .card-body
+            .row
+              .col-md-3.mb-3
+                h6.mb-2 Emotions & Mood
+                .d-flex.flex-wrap.gap-1
+                  a.badge.bg-light.text-dark.text-decoration-none(href="/browse?mood=happy") Happy
+                  a.badge.bg-light.text-dark.text-decoration-none(href="/browse?mood=reflective") Reflective
+                  a.badge.bg-light.text-dark.text-decoration-none(href="/browse?mood=excited") Excited
+                  a.badge.bg-light.text-dark.text-decoration-none(href="/browse?mood=calm") Calm
+                  a.badge.bg-light.text-dark.text-decoration-none(href="/browse?mood=nostalgic") Nostalgic
+
+              .col-md-3.mb-3
+                h6.mb-2 Time Periods
+                .d-flex.flex-wrap.gap-1
+                  a.badge.bg-secondary.text-decoration-none(href="/browse?period=today") Today
+                  a.badge.bg-secondary.text-decoration-none(href="/browse?period=week") This Week
+                  a.badge.bg-secondary.text-decoration-none(href="/browse?period=month") This Month
+                  a.badge.bg-secondary.text-decoration-none(href="/browse?period=year") This Year
+                  a.badge.bg-secondary.text-decoration-none(href="/browse?period=past") Archive
+
+              .col-md-3.mb-3
+                h6.mb-2 Relationships
+                .d-flex.flex-wrap.gap-1
+                  a.badge.bg-info.text-decoration-none(href="/browse?social=family") Family
+                  a.badge.bg-info.text-decoration-none(href="/browse?social=friends") Friends
+                  a.badge.bg-info.text-decoration-none(href="/browse?social=colleagues") Colleagues
+                  a.badge.bg-info.text-decoration-none(href="/browse?social=solo") Solo
+                  a.badge.bg-info.text-decoration-none(href="/browse?social=community") Community
+
+              .col-md-3.mb-3
+                h6.mb-2 Life Themes
+                .d-flex.flex-wrap.gap-1
+                  a.badge.bg-warning.text-decoration-none(href="/browse?theme=growth") Growth
+                  a.badge.bg-warning.text-decoration-none(href="/browse?theme=challenge") Challenge
+                  a.badge.bg-warning.text-decoration-none(href="/browse?theme=achievement") Achievement
+                  a.badge.bg-warning.text-decoration-none(href="/browse?theme=learning") Learning
+                  a.badge.bg-warning.text-decoration-none(href="/browse?theme=milestone") Milestone
+
+    // Recently tagged content
+    if recentTaggedEntries && recentTaggedEntries.length > 0
+      .row.mb-5
+        .col-12
+          .card
+            .card-header
+              h4.mb-0
+                i.fas.fa-clock.me-2
+                | Recently Classified Content
+            .card-body
+              .row
+                each entry in recentTaggedEntries.slice(0, 6)
+                  .col-md-6.col-lg-4.mb-3
+                    .card.border-light.h-100
+                      .card-body.py-3
+                        h6.mb-1
+                          a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                        .text-muted.small.mb-2= entry.date
+                        if entry.tags && entry.tags.length > 0
+                          each tag in entry.tags.slice(0, 3)
+                            span.badge.bg-light.text-dark.me-1.small= tag
+                        if entry.category
+                          .mt-2
+                            span.badge.bg-primary.small= entry.category
+
+    // Empty state
+    if (!academicEntries || academicEntries.length === 0) && (!personalEntries || personalEntries.length === 0) && (!travelEntries || travelEntries.length === 0)
+      .row
+        .col-12
+          .text-center.py-5
+            i.fas.fa-compass.fa-4x.text-muted.mb-4
+            h4.text-muted No content to browse yet
+            p.text-muted Start creating diary entries to see them organized by content type and themes
+            if !isPublicArea
+              a.btn.btn-primary.btn-lg(href="/entry/new")
+                i.fas.fa-plus.me-2
+                | Create Your First Entry
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Content type card hover effects
+      const cards = document.querySelectorAll('.content-type-card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-8px) scale(1.02)';
+          this.style.boxShadow = '0 12px 30px rgba(0,0,0,0.15)';
+          this.style.transition = 'all 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0) scale(1)';
+          this.style.boxShadow = '';
+        });
+      });
+
+      // Animate cards on load
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px) scale(0.95)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.5s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0) scale(1)';
+        }, index * 100);
+      });
+
+      // Badge hover effects
+      const badges = document.querySelectorAll('.badge');
+      badges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+          if (this.classList.contains('bg-light')) {
+            this.classList.remove('bg-light', 'text-dark');
+            this.classList.add('bg-primary', 'text-white');
+          }
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+          if (this.classList.contains('bg-primary')) {
+            this.classList.remove('bg-primary', 'text-white');
+            this.classList.add('bg-light', 'text-dark');
+          }
+        });
+      });
+    });

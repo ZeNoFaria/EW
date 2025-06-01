@@ -42,6 +42,8 @@ app.use((req, res, next) => {
 // Routes
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
+app.use("/api", require("./routes/api"));
+app.use("/archive", require("./routes/archive"));
 app.use("/", indexRouter);
 
 // Error handling middleware

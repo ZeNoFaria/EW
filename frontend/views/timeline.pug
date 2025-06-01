@@ -3,210 +3,190 @@ extends layout
 block content
   .container.mt-4
     .row.mb-4
+      .col-md-8
+        h2.mb-3
+          i.fas.fa-clock.me-2
+          | My Timeline
+        p.text-muted Your personal chronological diary organized by time
+      .col-md-4.text-end
+        a.btn.btn-primary(href="/archive/upload")
+          i.fas.fa-plus.me-2
+          | Upload SIP
+
+    // Filters and search
+    .row.mb-4
       .col-12
-        h2.mb-4 Timeline
-        p.lead Browse all entries in chronological order
+        .card
+          .card-body
+            form.row.g-3(action="/timeline", method="GET")
+              .col-md-3
+                input.form-control(type="text", name="search", placeholder="Search...", value=currentSearch || "")
+              .col-md-3
+                select.form-select(name="category")
+                  option(value="all") All Categories
+                  if categories && categories.length > 0
+                    each category in categories
+                      option(value=category.name, selected=currentCategory === category.name)= category.name
+              .col-md-3
+                select.form-select(name="tag")
+                  option(value="all") All Tags
+                  if allTags && allTags.length > 0
+                    each tag in allTags.slice(0, 10)
+                      - const tagSlug = tag.slug || (tag.name && tag.name.replace(/\s+/g, '-').toLowerCase())
+                      option(value=tagSlug, selected=currentTag === tagSlug)= tag.name
+              .col-md-3
+                .d-flex.gap-2
+                  button.btn.btn-primary(type="submit")
+                    i.fas.fa-search.me-1
+                    | Filter
+                  a.btn.btn-outline-secondary(href="/timeline") Clear
 
-        // Search and filter section
-        .row.mb-4
-          .col-md-6
-            .input-group
-              input.form-control#timeline-search(
-                type="text" 
-                placeholder="Search entries..." 
-                value=currentSearch || ""
-              )
-              button.btn.btn-outline-secondary(type="button" onclick="performSearch()") 
-                i.fas.fa-search
-
-          .col-md-6
-            // Category filter
-            if categories && categories.length > 0
-              select.form-select#category-filter(onchange="applyFilters()")
-                option(value="all" selected=currentCategory === "all") All Categories
-                each category in categories
-                  option(value=category.name selected=currentCategory === category.name)= category.name
-
-        // Tag filters
-        if allTags && allTags.length > 0
-          .row.mb-4
-            .col-12
-              h6 Filter by Tags:
-              .d-flex.flex-wrap.gap-2
-                button.btn.btn-sm(
-                  class=currentTag === "all" ? "btn-primary" : "btn-outline-primary"
-                  onclick="filterByTag('all')"
-                ) All
-                each tag in allTags
-                  button.btn.btn-sm(
-                    class=currentTag === tag.slug ? "btn-primary" : "btn-outline-primary"
-                    onclick=`filterByTag('${tag.slug}')`
-                  )
-                    = tag.name
-                    span.badge.bg-light.text-dark.ms-1= tag.count
-
-        // Active filters display
-        if currentTag !== "all" || currentCategory !== "all" || currentSearch
-          .row.mb-3
-            .col-12
-              .alert.alert-info.d-flex.justify-content-between.align-items-center
-                div
-                  strong Active Filters: 
-                  if currentSearch
-                    span.badge.bg-primary.me-1 Search: #{currentSearch}
-                  if currentTag !== "all"
-                    span.badge.bg-success.me-1 Tag: #{currentTag}
-                  if currentCategory !== "all"
-                    span.badge.bg-info.me-1 Category: #{currentCategory}
-                button.btn.btn-sm.btn-outline-secondary(onclick="clearAllFilters()") Clear All
-
-        // Results count
-        if entries && entries.length > 0
-          .row.mb-3
-            .col-12
-              p.text-muted= `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
-
+    .row
+      .col-md-8
         // Timeline entries
         if entries && entries.length > 0
-          .timeline
+          .position-relative
+            // Timeline line
+            .position-absolute.top-0.start-0.bg-primary(style="width: 3px; height: 100%; margin-left: 1rem;")
+            
             each entry in entries
-              .card.mb-4.shadow-sm
-                .card-body
-                  .row
-                    .col-md-2.text-center
-                      .badge.bg-primary.fs-6= entry.date
-                    .col-md-10
-                      h4.card-title
-                        a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
-                      
-                      if entry.excerpt
-                        p.card-text= entry.excerpt
-                      
-                      .d-flex.justify-content-between.align-items-center.mb-3
-                        div
-                          if entry.category && entry.category !== "Uncategorized"
-                            span.badge.bg-info.me-2= entry.category
-                          
-                          if entry.tags && entry.tags.length
-                            each tag in entry.tags.slice(0, 3)
-                              - var tagName = typeof tag === 'string' ? tag : tag.name || tag
-                              - var tagSlug = tagName.toLowerCase().replace(/\s+/g, '-')
-                              button.btn.btn-sm.btn-outline-secondary.me-1(
-                                onclick=`filterByTag('${tagSlug}')`
-                                title=`Filter by ${tagName}`
-                              )= tagName
-                            if entry.tags.length > 3
-                              span.text-muted.small +#{entry.tags.length - 3} more
-                        
-                        .btn-group
-                          a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`) Read More
-                          button.btn.btn-outline-secondary.btn-sm(onclick=`shareEntry('${entry.id}', '${entry.title}')`) Share
+              .position-relative.mb-4.ps-5
+                // Timeline dot
+                .position-absolute.bg-primary.rounded-circle.border.border-3.border-white(style="width: 12px; height: 12px; left: 0.7rem; top: 1rem;")
+                
+                .card.shadow-sm
+                  .card-body
+                    .d-flex.justify-content-between.align-items-start.mb-3
+                      div
+                        h5.card-title
+                          a.text-decoration-none(href=`/archive/aip/${entry._id || entry.id}`)= entry.titulo || entry.title || "Untitled"
+                        .d-flex.align-items-center.text-muted.mb-2
+                          i.fas.fa-calendar.me-1
+                          small= entry.dataCreacao ? new Date(entry.dataCreacao).toLocaleDateString() : (entry.date || "No date")
+                          if entry.tipo || entry.category
+                            // CORRIGIDO - Sintaxe Pug sem optional chaining
+                            - const tipoName = entry.tipo && entry.tipo.name ? entry.tipo.name : (entry.category && entry.category.name ? entry.category.name : (entry.tipo || entry.category))
+                            span.badge.bg-secondary.ms-2= tipoName
+                      .text-end
+                        if entry.isPublic
+                          span.badge.bg-success.mb-2
+                            i.fas.fa-globe.me-1
+                            | Public
+                        else
+                          span.badge.bg-secondary.mb-2
+                            i.fas.fa-lock.me-1
+                            | Private
+                        .btn-group.btn-group-sm
+                          a.btn.btn-outline-primary(href=`/archive/aip/${entry._id || entry.id}`)
+                            i.fas.fa-eye
+                          if entry.canEdit !== false
+                            a.btn.btn-outline-secondary(href=`/archive/aip/${entry._id || entry.id}/edit`)
+                              i.fas.fa-edit
+
+                    p.card-text= entry.descricao || entry.excerpt || "No description available"
+
+                    if entry.tags && entry.tags.length > 0
+                      .mb-2
+                        each tag in entry.tags.slice(0, 5)
+                          // CORRIGIDO - Sintaxe Pug sem optional chaining
+                          - const tagSlug = typeof tag === 'string' ? tag.replace(/\s+/g, '-').toLowerCase() : (tag.slug || (tag.name && tag.name.replace(/\s+/g, '-').toLowerCase()) || tag._id)
+                          - const tagName = typeof tag === 'string' ? tag : (tag.name || tag._id)
+                          a.badge.bg-light.text-dark.text-decoration-none.me-1(href=`/timeline?tag=${tagSlug}`)
+                            = tagName
+
+                    .d-flex.justify-content-between.align-items-center
+                      small.text-muted
+                        i.fas.fa-clock.me-1
+                        | #{entry.dataCreacao ? new Date(entry.dataCreacao).toLocaleDateString() : (entry.date || "No date")}
+                      a.btn.btn-outline-primary.btn-sm(href=`/archive/aip/${entry._id || entry.id}`)
+                        i.fas.fa-book-open.me-1
+                        | View Details
         else
           .text-center.py-5
-            i.fas.fa-clock.fa-3x.text-muted.mb-3
-            h3.text-muted No entries found
-            if currentTag !== "all" || currentCategory !== "all" || currentSearch
-              p.text-muted Try adjusting your filters or search terms.
-              button.btn.btn-primary(onclick="clearAllFilters()") Clear Filters
-            else
-              p.text-muted Start writing to see your timeline grow.
-              if isAuthenticated
-                a.btn.btn-primary(href="/entry/new") Create Your First Entry
+            i.fas.fa-plus-circle.fa-4x.text-muted.mb-4
+            h4.text-muted No entries yet
+            p.text-muted Start documenting your digital life
+            a.btn.btn-primary.btn-lg(href="/archive/upload")
+              i.fas.fa-plus.me-2
+              | Upload Your First SIP
 
-        // Simple pagination
-        if pagination && pagination.totalPages > 1
-          nav.mt-4
-            ul.pagination.justify-content-center
-              if pagination.hasPrev
-                li.page-item
-                  a.page-link(href=`?page=${pagination.currentPage - 1}${currentSearch ? '&search=' + currentSearch : ''}${currentTag !== 'all' ? '&tag=' + currentTag : ''}${currentCategory !== 'all' ? '&category=' + currentCategory : ''}`) Previous
-              else
-                li.page-item.disabled
-                  span.page-link Previous
-              
-              li.page-item.active
-                span.page-link= pagination.currentPage
-              
-              if pagination.hasNext
-                li.page-item
-                  a.page-link(href=`?page=${pagination.currentPage + 1}${currentSearch ? '&search=' + currentSearch : ''}${currentTag !== 'all' ? '&tag=' + currentTag : ''}${currentCategory !== 'all' ? '&category=' + currentCategory : ''}`) Next
-              else
-                li.page-item.disabled
-                  span.page-link Next
+      .col-md-4
+        // Stats
+        .card.mb-4
+          .card-header
+            h6.mb-0
+              i.fas.fa-chart-pie.me-2
+              | Timeline Stats
+          .card-body
+            .row.text-center
+              .col-6.border-end
+                h4.text-primary= totalEntries || (entries ? entries.length : 0)
+                small.text-muted Total Entries
+              .col-6
+                h4.text-success= entries ? entries.filter(e => e.isPublic).length : 0
+                small.text-muted Public
+
+        // Categories
+        .card.mb-4
+          .card-header
+            h6.mb-0
+              i.fas.fa-folder.me-2
+              | Categories
+          .card-body
+            if categories && categories.length > 0
+              each category in categories.slice(0, 8)
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  a.text-decoration-none(href=`/timeline?category=${category.name}`)= category.name
+                  span.badge.bg-secondary= category.count || 0
+            else
+              p.text-muted.small No categories yet
+
+        // Popular tags
+        .card
+          .card-header
+            h6.mb-0
+              i.fas.fa-tags.me-2
+              | Popular Tags
+          .card-body.tag-cloud
+            if allTags && allTags.length > 0
+              each tag in allTags.slice(0, 15)
+                - const tagSlug = tag.slug || (tag.name && tag.name.replace(/\s+/g, '-').toLowerCase()) || tag._id
+                - const tagCount = tag.count || 1
+                - const fontSize = Math.max(0.8, Math.min(1.2, tagCount / 3))
+                a.badge.bg-light.text-dark.text-decoration-none.me-1.mb-1(
+                  href=`/timeline?tag=${tagSlug}`,
+                  style=`font-size: ${fontSize}rem`
+                )
+                  = tag.name || tag._id
+                  if tag.count
+                    span.text-muted.ms-1= `(${tag.count})`
+            else
+              p.text-muted.small No tags yet
 
 block scripts
   script.
-    function filterByTag(tagSlug) {
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      
-      if (tagSlug === 'all') {
-        params.delete('tag');
-      } else {
-        params.set('tag', tagSlug);
-      }
-      
-      params.delete('page'); // Reset pagination
-      currentUrl.search = params.toString();
-      window.location.href = currentUrl.toString();
-    }
-    
-    function applyFilters() {
-      const category = document.getElementById('category-filter').value;
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      
-      if (category === 'all') {
-        params.delete('category');
-      } else {
-        params.set('category', category);
-      }
-      
-      params.delete('page'); // Reset pagination
-      currentUrl.search = params.toString();
-      window.location.href = currentUrl.toString();
-    }
-    
-    function performSearch() {
-      const search = document.getElementById('timeline-search').value;
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      
-      if (search.trim()) {
-        params.set('search', search);
-      } else {
-        params.delete('search');
-      }
-      
-      params.delete('page'); // Reset pagination
-      currentUrl.search = params.toString();
-      window.location.href = currentUrl.toString();
-    }
-    
-    function clearAllFilters() {
-      window.location.href = '/timeline';
-    }
-    
-    function shareEntry(id, title) {
-      if (navigator.share) {
-        navigator.share({
-          title: title,
-          text: `Check out this diary entry: ${title}`,
-          url: `${window.location.origin}/entry/${id}`
-        }).catch(err => console.log('Error sharing:', err));
-      } else {
-        const url = `${window.location.origin}/entry/${id}`;
-        navigator.clipboard.writeText(url).then(() => {
-          alert('Link copied to clipboard!');
-        }).catch(() => {
-          prompt('Copy this link:', url);
+    // Timeline animations and interactions
+    document.addEventListener('DOMContentLoaded', function() {
+      // Animate timeline items
+      const timelineItems = document.querySelectorAll('.position-relative .card');
+      timelineItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          item.style.transition = 'all 0.4s ease';
+          item.style.opacity = '1';
+          item.style.transform = 'translateX(0)';
+        }, index * 100);
+      });
+
+      // Filter form enhancements
+      const filterForm = document.querySelector('form');
+      if (filterForm) {
+        const inputs = filterForm.querySelectorAll('input, select');
+        inputs.forEach(input => {
+          input.addEventListener('change', () => {
+            filterForm.submit();
+          });
         });
-      }
-    }
-    
-    // Allow search on Enter key
-    document.getElementById('timeline-search')?.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        performSearch();
       }
     });

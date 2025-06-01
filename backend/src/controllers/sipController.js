@@ -1,81 +1,257 @@
 const SIP = require("../models/sipSchema");
+const Category = require("../models/categorySchema");
+const Tag = require("../models/tagSchema");
+const mongoose = require("mongoose");
 const multer = require("multer");
 const AdmZip = require("adm-zip");
 const path = require("path");
 const fs = require("fs").promises;
 const crypto = require("crypto");
 
-// Configuração do multer para upload de ZIP
+// ADICIONAR - Configuração do multer
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: function (req, file, cb) {
     cb(null, "uploads/temp/");
   },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.zip`;
-    cb(null, uniqueName);
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
 const upload = multer({
-  storage,
+  storage: storage,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB
+  },
   fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/zip",
+      "application/x-zip-compressed",
+      "application/x-tar",
+      "application/gzip",
+      "application/x-7z-compressed",
+    ];
+
     if (
-      file.mimetype === "application/zip" ||
-      file.mimetype === "application/x-zip-compressed"
+      allowedTypes.includes(file.mimetype) ||
+      file.originalname.match(/\.(zip|tar|tar\.gz|7z)$/i)
     ) {
       cb(null, true);
     } else {
-      cb(new Error("Only ZIP files are allowed"));
+      cb(new Error("Apenas arquivos ZIP, TAR, TAR.GZ ou 7Z são permitidos"));
     }
   },
 });
 
-// Função para calcular checksum
-const calculateChecksum = (filePath) => {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash("md5");
-    const stream = require("fs").createReadStream(filePath);
-
-    stream.on("data", (data) => hash.update(data));
-    stream.on("end", () => resolve(hash.digest("hex")));
-    stream.on("error", reject);
-  });
+// ADICIONAR - Função para calcular checksum (se não existir)
+const calculateChecksum = async (filePath) => {
+  const fileBuffer = await fs.readFile(filePath);
+  return crypto.createHash("sha256").update(fileBuffer).digest("hex");
 };
 
-// Validar manifesto
+// ADICIONAR - Função para validar manifesto (se não existir)
 const validateManifesto = (manifesto) => {
-  const required = ["metadata"];
-  const metadataRequired = ["dataCreacao", "titulo", "tipo"];
-
-  for (let field of required) {
-    if (!manifesto[field]) {
-      throw new Error(
-        `Campo obrigatório '${field}' não encontrado no manifesto`
-      );
-    }
+  if (!manifesto.metadata) {
+    throw new Error("Manifesto deve conter seção 'metadata'");
   }
 
-  for (let field of metadataRequired) {
-    if (!manifesto.metadata[field]) {
-      throw new Error(
-        `Campo obrigatório 'metadata.${field}' não encontrado no manifesto`
-      );
-    }
+  if (!manifesto.metadata.titulo) {
+    throw new Error("Manifesto deve conter 'metadata.titulo'");
   }
 
+  // Outras validações conforme necessário
   return true;
 };
 
-// Ingestão de SIP
+// NOVA FUNÇÃO - Processar metadados do formulário
+const processFormMetadata = async (formData, userId) => {
+  const processedMetadata = {
+    produtor: userId,
+    submitter: userId,
+    dataCreacao: new Date(),
+  };
+
+  // Processar título
+  if (formData.titulo) {
+    processedMetadata.titulo = formData.titulo.trim();
+  }
+
+  // Processar descrição
+  if (formData.descricao) {
+    processedMetadata.descricao = formData.descricao.trim();
+  }
+
+  // Processar tipo (converter string para ObjectId)
+  if (formData.tipo) {
+    if (mongoose.Types.ObjectId.isValid(formData.tipo)) {
+      // Já é um ObjectId válido
+      processedMetadata.tipo = formData.tipo;
+    } else {
+      // É uma string, tentar encontrar ou criar categoria
+      let categoria = await Category.findOne({
+        name: { $regex: new RegExp(`^${formData.tipo}$`, "i") },
+      });
+
+      if (!categoria) {
+        // Criar nova categoria (usando apenas os campos do seu schema)
+        categoria = new Category({
+          name: formData.tipo,
+          description: `Auto-created category for ${formData.tipo}`,
+          icon: "📄", // Ícone padrão
+        });
+        await categoria.save();
+        console.log(`Nova categoria criada: ${categoria.name}`);
+      }
+
+      processedMetadata.tipo = categoria._id;
+    }
+  }
+
+  // Processar tags (converter strings para ObjectIds)
+  if (formData.tags) {
+    const tagIds = [];
+    let tagNames = [];
+
+    // Processar diferentes formatos de tags
+    if (Array.isArray(formData.tags)) {
+      // Se já é um array
+      tagNames = formData.tags
+        .map((tag) => tag.toString().trim())
+        .filter((tag) => tag);
+    } else if (typeof formData.tags === "string") {
+      // Se é uma string separada por vírgulas
+      tagNames = formData.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag);
+    }
+
+    // Converter cada tag para ObjectId
+    for (const tagName of tagNames) {
+      if (mongoose.Types.ObjectId.isValid(tagName)) {
+        // Já é um ObjectId
+        tagIds.push(tagName);
+      } else {
+        // É uma string, encontrar ou criar tag
+        let tag = await Tag.findOne({
+          name: { $regex: new RegExp(`^${tagName}$`, "i") },
+        });
+
+        if (!tag) {
+          // Criar nova tag (usando apenas os campos do seu schema)
+          tag = new Tag({
+            name: tagName,
+          });
+          await tag.save();
+          console.log(`Nova tag criada: ${tag.name}`);
+        }
+
+        tagIds.push(tag._id);
+      }
+    }
+
+    processedMetadata.tags = tagIds;
+  }
+
+  // Processar visibilidade
+  if (formData.isPublic !== undefined) {
+    processedMetadata.isPublic =
+      formData.isPublic === "true" || formData.isPublic === true;
+  }
+
+  return processedMetadata;
+};
+
+// NOVA FUNÇÃO - Processar metadados do manifesto
+const processManifestMetadata = async (manifestoMetadata, userId) => {
+  console.log("=== processManifestMetadata INICIADA ===");
+  console.log("manifestoMetadata recebida:", manifestoMetadata);
+
+  const processedMetadata = {
+    ...manifestoMetadata, // Manter todos os campos originais
+    produtor: userId,
+    submitter: userId,
+    dataCreacao: new Date(manifestoMetadata.dataCreacao) || new Date(),
+  };
+
+  // Processar tipo (converter string para ObjectId)
+  if (manifestoMetadata.tipo && typeof manifestoMetadata.tipo === "string") {
+    console.log("Processando tipo do manifesto:", manifestoMetadata.tipo);
+
+    let categoria = await Category.findOne({
+      name: { $regex: new RegExp(`^${manifestoMetadata.tipo}$`, "i") },
+    });
+
+    if (!categoria) {
+      console.log("Categoria não encontrada, criando nova...");
+      categoria = new Category({
+        name: manifestoMetadata.tipo,
+        description: `Auto-created category for ${manifestoMetadata.tipo}`,
+        icon: "🏷️",
+      });
+      await categoria.save();
+      console.log(
+        `Nova categoria criada: ${categoria.name} (${categoria._id})`
+      );
+    }
+
+    processedMetadata.tipo = categoria._id;
+    console.log("Tipo convertido para ObjectId:", processedMetadata.tipo);
+  }
+
+  // Processar tags (converter strings para ObjectIds)
+  if (manifestoMetadata.tags && Array.isArray(manifestoMetadata.tags)) {
+    console.log("Processando tags do manifesto:", manifestoMetadata.tags);
+
+    const tagIds = [];
+
+    for (const tagName of manifestoMetadata.tags) {
+      if (typeof tagName === "string") {
+        let tag = await Tag.findOne({
+          name: { $regex: new RegExp(`^${tagName}$`, "i") },
+        });
+
+        if (!tag) {
+          console.log(`Tag não encontrada, criando: ${tagName}`);
+          tag = new Tag({
+            name: tagName,
+          });
+          await tag.save();
+          console.log(`Nova tag criada: ${tag.name} (${tag._id})`);
+        }
+
+        tagIds.push(tag._id);
+        console.log(`Tag processada: ${tagName} -> ${tag._id}`);
+      } else if (mongoose.Types.ObjectId.isValid(tagName)) {
+        tagIds.push(tagName);
+      }
+    }
+
+    processedMetadata.tags = tagIds;
+    console.log("Tags convertidas para ObjectIds:", processedMetadata.tags);
+  }
+
+  console.log("=== processManifestMetadata CONCLUÍDA ===");
+  console.log("Resultado:", processedMetadata);
+
+  return processedMetadata;
+};
+
+// CORRIGIR - Função principal de ingestão
 exports.ingestSIP = [
   upload.single("sipFile"),
   async (req, res) => {
     try {
       if (!req.file) {
-        return res
-          .status(400)
-          .json({ error: "Nenhum ficheiro ZIP foi enviado" });
+        return res.status(400).json({
+          success: false,
+          error: "Nenhum ficheiro ZIP foi enviado",
+        });
       }
+
+      console.log("=== INGESTÃO SIP INICIADA ===");
+      console.log("Dados do formulário recebidos:", req.body);
+      console.log("Arquivo recebido:", req.file.originalname);
 
       const zipPath = req.file.path;
       const zip = new AdmZip(zipPath);
@@ -88,48 +264,113 @@ exports.ingestSIP = [
           entry.entryName === "manifesto-SIP.xml"
       );
 
-      if (!manifestoEntry) {
-        await fs.unlink(zipPath);
-        return res.status(400).json({
-          error:
-            "Manifesto SIP não encontrado (manifesto-SIP.json ou manifesto-SIP.xml)",
-        });
+      let manifestoMetadata = {};
+
+      if (manifestoEntry) {
+        try {
+          const manifestoContent = manifestoEntry.getData().toString("utf8");
+
+          if (manifestoEntry.entryName.endsWith(".json")) {
+            const manifesto = JSON.parse(manifestoContent);
+            console.log("Manifesto encontrado:", manifesto);
+
+            // PROCESSAR METADADOS DO MANIFESTO
+            manifestoMetadata = await processManifestMetadata(
+              manifesto.metadata || {},
+              req.user._id
+            );
+          } else {
+            console.warn("Suporte XML ainda não implementado");
+          }
+        } catch (error) {
+          console.error("Erro ao processar manifesto:", error);
+          await fs.unlink(zipPath);
+          return res.status(400).json({
+            success: false,
+            error: `Erro no manifesto: ${error.message}`,
+          });
+        }
       }
 
-      // Ler e validar manifesto
-      let manifesto;
-      try {
-        const manifestoContent = manifestoEntry.getData().toString("utf8");
+      // PROCESSAR DADOS DO FORMULÁRIO (se existirem)
+      let formMetadata = {};
+      const hasFormData = Object.keys(req.body).length > 0;
 
-        if (manifestoEntry.entryName.endsWith(".json")) {
-          manifesto = JSON.parse(manifestoContent);
-        } else {
-          // TODO: Implementar parsing XML se necessário
-          throw new Error("Suporte XML ainda não implementado");
+      if (hasFormData) {
+        try {
+          console.log("Processando dados do formulário...");
+          formMetadata = await processFormMetadata(req.body, req.user._id);
+          console.log("Metadados do formulário processados:", formMetadata);
+        } catch (metadataError) {
+          console.error(
+            "Erro ao processar metadados do formulário:",
+            metadataError
+          );
+          await fs.unlink(zipPath);
+          return res.status(400).json({
+            success: false,
+            error: `Erro nos metadados: ${metadataError.message}`,
+          });
         }
+      }
 
-        validateManifesto(manifesto);
-      } catch (error) {
-        await fs.unlink(zipPath);
-        return res
-          .status(400)
-          .json({ error: `Erro no manifesto: ${error.message}` });
+      // COMBINAR METADADOS (formulário tem prioridade sobre manifesto)
+      const finalMetadata = {
+        ...manifestoMetadata, // Manifesto como base
+        ...formMetadata, // Formulário sobrescreve manifesto
+        dataCreacao:
+          formMetadata.dataCreacao ||
+          manifestoMetadata.dataCreacao ||
+          new Date(),
+      };
+
+      console.log("=== METADATA FINAL ===");
+      console.log("Manifesto:", manifestoMetadata);
+      console.log("Formulário:", formMetadata);
+      console.log("Final:", finalMetadata);
+
+      // VERIFICAR SE OS TIPOS ESTÃO CORRETOS
+      if (finalMetadata.tipo) {
+        console.log(
+          "Tipo final:",
+          finalMetadata.tipo,
+          "isObjectId:",
+          mongoose.Types.ObjectId.isValid(finalMetadata.tipo)
+        );
+      }
+      if (finalMetadata.tags) {
+        console.log(
+          "Tags final:",
+          finalMetadata.tags,
+          "isArray:",
+          Array.isArray(finalMetadata.tags)
+        );
+        if (Array.isArray(finalMetadata.tags)) {
+          finalMetadata.tags.forEach((tag, index) => {
+            console.log(
+              `tag[${index}]:`,
+              tag,
+              "isObjectId:",
+              mongoose.Types.ObjectId.isValid(tag)
+            );
+          });
+        }
       }
 
       // Criar entrada SIP na base de dados
       const sipData = {
-        metadata: {
-          ...manifesto.metadata,
-          dataCreacao: new Date(manifesto.metadata.dataCreacao),
-          produtor: req.user._id,
-          submitter: req.user._id,
-        },
+        metadata: finalMetadata,
         sipInfo: {
           originalFilename: req.file.originalname,
-          manifestoValid: true,
+          manifestoValid: !!manifestoEntry,
+          hasFormData: hasFormData,
         },
         status: "processing",
+        isPublic: finalMetadata.isPublic || false,
       };
+
+      console.log("=== CRIANDO SIP ===");
+      console.log("sipData completo:", JSON.stringify(sipData, null, 2));
 
       const sip = new SIP(sipData);
       await sip.save();
@@ -141,7 +382,7 @@ exports.ingestSIP = [
 
       for (let entry of zipEntries) {
         if (
-          entry.entryName !== manifestoEntry.entryName &&
+          entry.entryName !== manifestoEntry?.entryName &&
           !entry.isDirectory
         ) {
           const fileBuffer = entry.getData();
@@ -179,14 +420,22 @@ exports.ingestSIP = [
       await fs.unlink(zipPath);
 
       res.status(201).json({
+        success: true,
         message: "SIP ingerido com sucesso",
         sipId: sip._id,
+        aipId: sip._id,
         processedFiles: processedFiles.length,
+        metadata: finalMetadata,
       });
     } catch (error) {
-      console.error("Erro na ingestão SIP:", error);
+      console.error("=== ERRO NA INGESTÃO SIP ===");
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      if (error.errors) {
+        console.error("Validation errors:", error.errors);
+      }
 
-      // Limpar ficheiro temporário em caso de erro
+      // Limpar ficheiro temporário
       if (req.file) {
         try {
           await fs.unlink(req.file.path);
@@ -195,11 +444,29 @@ exports.ingestSIP = [
         }
       }
 
-      res.status(500).json({ error: "Erro interno no processamento do SIP" });
+      // Retornar erro detalhado
+      let errorMessage = "Erro interno no processamento do SIP";
+
+      if (error.name === "ValidationError") {
+        errorMessage =
+          "Dados inválidos: " +
+          Object.values(error.errors)
+            .map((e) => e.message)
+            .join(", ");
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+        message: errorMessage,
+        details:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
+      });
     }
   },
 ];
-
 // Listar AIPs
 exports.getAllAIPs = async (req, res) => {
   try {

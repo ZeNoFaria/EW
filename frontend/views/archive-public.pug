@@ -1,0 +1,177 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-3
+          i.fas.fa-archive.me-2
+          | Public Digital Archive
+        p.text-muted Explore publicly available digital preservation packages and historical materials
+
+    // Filters
+    .row.mb-4
+      .col-12
+        .card
+          .card-body
+            form.row.g-3(action="/archive/public", method="GET")
+              .col-md-4
+                input.form-control(type="text", name="search", placeholder="Search archive...", value=filters.search || "")
+              .col-md-4
+                select.form-select(name="tipo")
+                  option(value="") All Types
+                  option(value="text", selected=filters.tipo === "text") Text Documents
+                  option(value="image", selected=filters.tipo === "image") Images
+                  option(value="audio", selected=filters.tipo === "audio") Audio
+                  option(value="video", selected=filters.tipo === "video") Video
+                  option(value="mixed", selected=filters.tipo === "mixed") Mixed Media
+              .col-md-4
+                .d-flex.gap-2
+                  button.btn.btn-primary(type="submit")
+                    i.fas.fa-search.me-1
+                    | Filter
+                  a.btn.btn-outline-secondary(href="/archive/public") Clear
+
+    // Archive items
+    .row
+      if aips && aips.length > 0
+        each aip in aips
+          .col-md-6.col-lg-4.mb-4
+            .card.h-100.shadow-sm.archive-card
+              .card-header.d-flex.justify-content-between.align-items-center
+                .d-flex.align-items-center
+                  i.fas.fa-archive.text-primary.me-2
+                  h6.mb-0.text-truncate= aip.metadata ? aip.metadata.titulo : 'Untitled'
+                span.badge.bg-success
+                  i.fas.fa-globe.me-1
+                  | Public
+
+              .card-body
+                if aip.metadata && aip.metadata.descricao
+                  p.card-text.text-muted= aip.metadata.descricao.substring(0, 100) + (aip.metadata.descricao.length > 100 ? '...' : '')
+                else
+                  p.card-text.text-muted No description available
+
+                .mb-3
+                  .row.text-center
+                    .col-6
+                      small.text-muted Type
+                      .fw-bold= aip.metadata ? aip.metadata.tipo : 'Unknown'
+                    .col-6
+                      small.text-muted Created
+                      .fw-bold= new Date(aip.createdAt || Date.now()).toLocaleDateString()
+
+                if aip.metadata && aip.metadata.tags && aip.metadata.tags.length > 0
+                  .mb-3
+                    each tag in aip.metadata.tags.slice(0, 3)
+                      span.badge.bg-light.text-dark.me-1= tag
+
+              .card-footer.bg-transparent
+                .d-flex.justify-content-between.align-items-center
+                  small.text-muted
+                    i.fas.fa-user.me-1
+                    = aip.metadata && aip.metadata.produtor ? (aip.metadata.produtor.username || 'Anonymous') : 'Unknown'
+                  a.btn.btn-outline-primary.btn-sm(href=`/archive/aip/${aip._id}`)
+                    i.fas.fa-eye.me-1
+                    | View
+      else
+        .col-12
+          .text-center.py-5
+            i.fas.fa-archive.fa-4x.text-muted.mb-4
+            h4.text-muted No public archives found
+            p.text-muted
+              if filters.search || filters.tipo
+                | Try adjusting your search criteria
+              else
+                | No public digital preservation packages are currently available
+
+    // Pagination
+    if pagination && pagination.totalPages > 1
+      .row.mt-4
+        .col-12
+          nav(aria-label="Archive pagination")
+            ul.pagination.justify-content-center
+              if pagination.currentPage > 1
+                li.page-item
+                  a.page-link(href=`/archive/public?page=${pagination.currentPage - 1}${filters.search ? '&search=' + filters.search : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`) Previous
+              
+              - for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++)
+                li.page-item(class=i === pagination.currentPage ? 'active' : '')
+                  a.page-link(href=`/archive/public?page=${i}${filters.search ? '&search=' + filters.search : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`)= i
+              
+              if pagination.currentPage < pagination.totalPages
+                li.page-item
+                  a.page-link(href=`/archive/public?page=${pagination.currentPage + 1}${filters.search ? '&search=' + filters.search : ''}${filters.tipo ? '&tipo=' + filters.tipo : ''}`) Next
+
+    // Information sidebar
+    .row.mt-5
+      .col-md-8
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-info-circle.me-2
+              | About Digital Archive
+          .card-body
+            p Digital preservation ensures long-term access to digital materials. Our archive contains various types of content including documents, images, audio, and video files.
+            
+            h6 Archive Standards:
+            ul.list-unstyled.ms-3
+              li
+                i.fas.fa-check.text-success.me-2
+                | OAIS (Open Archival Information System) compliant
+              li
+                i.fas.fa-check.text-success.me-2
+                | SIP/AIP/DIP workflow implementation
+              li
+                i.fas.fa-check.text-success.me-2
+                | Metadata preservation and enhancement
+              li
+                i.fas.fa-check.text-success.me-2
+                | Format migration and validation
+
+      .col-md-4
+        .card
+          .card-header
+            h6.mb-0
+              i.fas.fa-chart-pie.me-2
+              | Archive Statistics
+          .card-body
+            .text-center
+              .mb-3
+                h4.text-primary= aips ? aips.length : 0
+                small.text-muted Public Packages
+              
+              if !isAuthenticated
+                .mt-3
+                  a.btn.btn-success.w-100(href="/auth/login")
+                    i.fas.fa-sign-in-alt.me-2
+                    | Access Full Archive
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Archive card hover effects
+      const cards = document.querySelectorAll('.archive-card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px)';
+          this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+
+      // Animate cards on load
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.3s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+        }, index * 100);
+      });
+    });

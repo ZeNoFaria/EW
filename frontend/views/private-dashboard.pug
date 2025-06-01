@@ -1,0 +1,167 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        .d-flex.justify-content-between.align-items-center
+          div
+            h2.mb-1
+              i.fas.fa-tachometer-alt.me-2
+              | My Digital Diary Dashboard
+            p.text-muted.mb-0 Welcome back, #{user ? user.username : 'User'}!
+          .text-end
+            .btn-group
+              a.btn.btn-primary(href="/entry/new")
+                i.fas.fa-plus.me-2
+                | New Entry
+              a.btn.btn-outline-secondary(href="/timeline")
+                i.fas.fa-clock.me-2
+                | Timeline
+
+    // Quick stats
+    .row.mb-4
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;")
+          .card-body
+            i.fas.fa-file-alt.fa-2x.mb-2
+            h3.mb-1= stats.totalEntries || 0
+            small Total Entries
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;")
+          .card-body
+            i.fas.fa-globe.fa-2x.mb-2
+            h3.mb-1= stats.publicEntries || 0
+            small Public Entries
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;")
+          .card-body
+            i.fas.fa-archive.fa-2x.mb-2
+            h3.mb-1= stats.totalAips || 0
+            small Archived Items
+      .col-md-3.mb-3
+        .card.text-center.border-0.shadow-sm(style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;")
+          .card-body
+            i.fas.fa-eye.fa-2x.mb-2
+            h3.mb-1= stats.totalViews || 0
+            small Total Views
+
+    .row
+      .col-md-8
+        // Recent entries
+        .card.mb-4
+          .card-header.d-flex.justify-content-between.align-items-center
+            h5.mb-0
+              i.fas.fa-clock.me-2
+              | Recent Entries
+            a.btn.btn-outline-primary.btn-sm(href="/timeline") View All
+          
+          .card-body
+            if recentEntries && recentEntries.length > 0
+              each entry in recentEntries
+                .d-flex.justify-content-between.align-items-center.border-bottom.pb-2.mb-2
+                  div
+                    h6.mb-1
+                      a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                    small.text-muted= entry.date
+                    if entry.isPublic
+                      span.badge.bg-success.ms-2
+                        i.fas.fa-globe.me-1
+                        | Public
+                    else
+                      span.badge.bg-secondary.ms-2
+                        i.fas.fa-lock.me-1
+                        | Private
+                  .btn-group.btn-group-sm
+                    a.btn.btn-outline-primary(href=`/entry/${entry.id}`)
+                      i.fas.fa-eye
+                    a.btn.btn-outline-secondary(href=`/entry/${entry.id}/edit`)
+                      i.fas.fa-edit
+            else
+              .text-center.py-4
+                i.fas.fa-plus-circle.fa-3x.text-muted.mb-3
+                h6.text-muted Create your first entry
+                a.btn.btn-primary(href="/entry/new") Get Started
+
+        // Quick actions
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-bolt.me-2
+              | Quick Actions
+          .card-body
+            .row
+              .col-md-6.mb-2
+                a.btn.btn-outline-primary.w-100(href="/entry/new")
+                  i.fas.fa-plus.me-2
+                  | New Entry
+              .col-md-6.mb-2
+                a.btn.btn-outline-secondary.w-100(href="/archive/upload")
+                  i.fas.fa-upload.me-2
+                  | Upload SIP
+              .col-md-6.mb-2
+                a.btn.btn-outline-info.w-100(href="/categories")
+                  i.fas.fa-folder.me-2
+                  | Manage Categories
+              .col-md-6.mb-2
+                a.btn.btn-outline-success.w-100(href="/browse")
+                  i.fas.fa-search.me-2
+                  | Browse Content
+
+      .col-md-4
+        // Recent AIPs
+        .card.mb-4
+          .card-header
+            h5.mb-0
+              i.fas.fa-archive.me-2
+              | Recent Archives
+          .card-body
+            if recentAips && recentAips.length > 0
+              each aip in recentAips
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  div
+                    h6.mb-1
+                      a.text-decoration-none(href=`/archive/aip/${aip._id}`)= aip.metadata.titulo
+                    small.text-muted= new Date(aip.createdAt).toLocaleDateString()
+                    br
+                    span.badge(class=aip.status === 'ingested' ? 'bg-success' : 'bg-warning')= aip.status
+                  a.btn.btn-outline-primary.btn-sm(href=`/archive/aip/${aip._id}`)
+                    i.fas.fa-eye
+            else
+              .text-center.py-3
+                i.fas.fa-archive.fa-2x.text-muted.mb-2
+                p.text-muted.mb-0.small No archives yet
+
+        // Profile summary
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-user.me-2
+              | Profile
+          .card-body
+            if user
+              .text-center
+                .bg-primary.rounded-circle.mx-auto.mb-3.d-flex.align-items-center.justify-content-center(style="width: 60px; height: 60px;")
+                  i.fas.fa-user.fa-2x.text-white
+                h6= user.username
+                p.text-muted.small= user.email
+                small.text-muted Member since #{new Date(user.createdAt || Date.now()).toLocaleDateString()}
+                .mt-3
+                  a.btn.btn-outline-primary.btn-sm.w-100(href="/profile") Edit Profile
+
+block scripts
+  script.
+    // Dashboard animations
+    document.addEventListener('DOMContentLoaded', function() {
+      // Animate stats cards
+      const statCards = document.querySelectorAll('.row .card');
+      statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.3s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+        }, index * 100);
+      });
+    });

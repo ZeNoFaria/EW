@@ -1,0 +1,281 @@
+extends layout
+
+block content
+  .container.mt-4
+    if aip
+      .row.mb-4
+        .col-md-8
+          nav(aria-label="breadcrumb")
+            ol.breadcrumb
+              li.breadcrumb-item
+                a(href="/archive") Archive
+              li.breadcrumb-item
+                a(href="/archive/aips") AIPs
+              li.breadcrumb-item.active= aip.metadata ? aip.metadata.titulo : 'AIP Details'
+        .col-md-4.text-end
+          .btn-group
+            if !isPublicArea && aip.status === 'ingested'
+              a.btn.btn-success(href=`/archive/download/${aip._id}`)
+                i.fas.fa-download.me-2
+                | Download DIP
+            
+            if isOwner
+              button.btn.btn-outline-secondary.dropdown-toggle(type="button", data-bs-toggle="dropdown")
+                i.fas.fa-cog.me-2
+                | Actions
+              ul.dropdown-menu
+                li
+                  a.dropdown-item(href="#")
+                    i.fas.fa-edit.me-2
+                    | Edit Metadata
+                li
+                  a.dropdown-item(href="#")
+                    i.fas.fa-share.me-2
+                    | Share Settings
+                li: hr.dropdown-divider
+                li
+                  a.dropdown-item.text-danger(href="#")
+                    i.fas.fa-trash.me-2
+                    | Delete AIP
+
+      .row
+        .col-md-8
+          // Main AIP information
+          .card.shadow.mb-4
+            .card-header.d-flex.justify-content-between.align-items-center
+              h3.mb-0= aip.metadata ? aip.metadata.titulo : 'Untitled AIP'
+              div
+                if aip.metadata && aip.metadata.isPublic
+                  span.badge.bg-success.fs-6.me-2
+                    i.fas.fa-globe.me-1
+                    | Public
+                else
+                  span.badge.bg-secondary.fs-6.me-2
+                    i.fas.fa-lock.me-1
+                    | Private
+                
+                span.badge(class=aip.status === 'ingested' ? 'bg-success' : aip.status === 'processing' ? 'bg-warning' : aip.status === 'error' ? 'bg-danger' : 'bg-secondary').fs-6
+                  = aip.status || 'pending'
+
+            .card-body
+              if aip.metadata && aip.metadata.descricao
+                .mb-4
+                  h5 Description
+                  p.lead= aip.metadata.descricao
+              else
+                .mb-4
+                  p.text-muted.fst-italic No description provided
+
+              // Metadata grid
+              .row.mb-4
+                .col-md-6
+                  h6.mb-3
+                    i.fas.fa-info-circle.me-2
+                    | Basic Information
+                  .table-responsive
+                    table.table.table-sm
+                      tbody
+                        tr
+                          td.fw-bold Content Type:
+                          td= aip.metadata ? aip.metadata.tipo : 'Unknown'
+                        tr
+                          td.fw-bold Created:
+                          td= new Date(aip.createdAt || Date.now()).toLocaleDateString()
+                        tr
+                          td.fw-bold Producer:
+                          td= aip.metadata && aip.metadata.produtor ? aip.metadata.produtor.username : 'Unknown'
+                        tr
+                          td.fw-bold Language:
+                          td= aip.metadata ? aip.metadata.idioma || 'Not specified' : 'Unknown'
+                        tr
+                          td.fw-bold Location:
+                          td= aip.metadata ? aip.metadata.localizacao || 'Not specified' : 'Unknown'
+
+                .col-md-6
+                  h6.mb-3
+                    i.fas.fa-calendar.me-2
+                    | Content Period
+                  .table-responsive
+                    table.table.table-sm
+                      tbody
+                        tr
+                          td.fw-bold Start Date:
+                          td= aip.metadata && aip.metadata.dataInicio ? new Date(aip.metadata.dataInicio).toLocaleDateString() : 'Not specified'
+                        tr
+                          td.fw-bold End Date:
+                          td= aip.metadata && aip.metadata.dataFim ? new Date(aip.metadata.dataFim).toLocaleDateString() : 'Not specified'
+                        tr
+                          td.fw-bold Access Level:
+                          td
+                            span.badge(class=aip.metadata && aip.metadata.nivelAcesso === 'open' ? 'bg-success' : aip.metadata && aip.metadata.nivelAcesso === 'restricted' ? 'bg-warning' : 'bg-secondary')
+                              = aip.metadata ? aip.metadata.nivelAcesso || 'private' : 'unknown'
+
+              // Tags
+              if aip.metadata && aip.metadata.tags && aip.metadata.tags.length > 0
+                .mb-4
+                  h6.mb-2
+                    i.fas.fa-tags.me-2
+                    | Tags
+                  each tag in aip.metadata.tags
+                    span.badge.bg-light.text-dark.me-2.mb-1= tag
+
+              // Preservation notes
+              if aip.metadata && aip.metadata.observacoes
+                .mb-4
+                  h6.mb-2
+                    i.fas.fa-clipboard.me-2
+                    | Preservation Notes
+                  .border.rounded.p-3.bg-light
+                    p.mb-0= aip.metadata.observacoes
+
+              // Package structure (if available)
+              if aip.estrutura
+                .mb-4
+                  h6.mb-3
+                    i.fas.fa-folder-tree.me-2
+                    | Package Structure
+                  .border.rounded.p-3.bg-light
+                    pre.mb-0.small= JSON.stringify(aip.estrutura, null, 2)
+
+        .col-md-4
+          // Status timeline
+          .card.mb-4
+            .card-header
+              h6.mb-0
+                i.fas.fa-history.me-2
+                | Processing Timeline
+            .card-body
+              .timeline-vertical
+                .timeline-item(class=aip.status ? 'completed' : '')
+                  .timeline-marker.bg-primary
+                  .timeline-content
+                    h6.mb-1 SIP Submitted
+                    small.text-muted= new Date(aip.createdAt || Date.now()).toLocaleString()
+                
+                .timeline-item(class=aip.status && aip.status !== 'pending' ? 'completed' : '')
+                  .timeline-marker(class=aip.status && aip.status !== 'pending' ? 'bg-warning' : 'bg-light')
+                  .timeline-content
+                    h6.mb-1 Processing Started
+                    small.text-muted= aip.status === 'pending' ? 'Waiting...' : 'In progress'
+                
+                .timeline-item(class=aip.status === 'ingested' ? 'completed' : '')
+                  .timeline-marker(class=aip.status === 'ingested' ? 'bg-success' : 'bg-light')
+                  .timeline-content
+                    h6.mb-1 AIP Created
+                    small.text-muted= aip.status === 'ingested' ? 'Complete' : 'Pending'
+                
+                .timeline-item(class=aip.status === 'ingested' ? 'completed' : '')
+                  .timeline-marker(class=aip.status === 'ingested' ? 'bg-info' : 'bg-light')
+                  .timeline-content
+                    h6.mb-1 DIP Available
+                    small.text-muted= aip.status === 'ingested' ? 'Ready for download' : 'Not ready'
+
+          // Technical metadata
+          .card.mb-4
+            .card-header
+              h6.mb-0
+                i.fas.fa-cogs.me-2
+                | Technical Details
+            .card-body
+              .table-responsive
+                table.table.table-sm
+                  tbody
+                    tr
+                      td.fw-bold AIP ID:
+                      td.font-monospace.small= aip._id
+                    tr
+                      td.fw-bold Format:
+                      td= aip.formato || 'ZIP Archive'
+                    tr
+                      td.fw-bold Size:
+                      td= aip.tamanho ? (aip.tamanho / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'
+                    tr
+                      td.fw-bold Checksum:
+                      td.font-monospace.small= aip.checksum ? aip.checksum.substring(0, 16) + '...' : 'Calculating...'
+
+          // Related actions
+          .card
+            .card-header
+              h6.mb-0
+                i.fas.fa-link.me-2
+                | Related Actions
+            .card-body
+              .d-grid.gap-2
+                if !isPublicArea
+                  a.btn.btn-outline-primary(href="/archive/my-uploads")
+                    i.fas.fa-user.me-2
+                    | My Other Uploads
+                
+                a.btn.btn-outline-secondary(href="/archive/aips")
+                  i.fas.fa-list.me-2
+                  | Browse All AIPs
+                
+                if aip.metadata && aip.metadata.produtor
+                  a.btn.btn-outline-info(href=`/archive/aips?producer=${aip.metadata.produtor._id}`)
+                    i.fas.fa-user-circle.me-2
+                    | Same Producer
+                
+                if !isPublicArea && aip.status === 'ingested'
+                  a.btn.btn-success(href=`/archive/download/${aip._id}`)
+                    i.fas.fa-download.me-2
+                    | Download DIP
+
+    else
+      .row.justify-content-center
+        .col-md-6.text-center
+          .card
+            .card-body.py-5
+              i.fas.fa-exclamation-triangle.fa-3x.text-warning.mb-3
+              h4.text-muted AIP Not Found
+              p.text-muted The requested Archive Information Package could not be found or you don't have permission to view it.
+              a.btn.btn-primary(href="/archive")
+                i.fas.fa-archive.me-2
+                | Back to Archive
+
+block styles
+  style.
+    .timeline-vertical {
+      position: relative;
+      padding-left: 30px;
+    }
+    .timeline-vertical::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e9ecef;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .timeline-marker {
+      position: absolute;
+      left: -22px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #e9ecef;
+    }
+    .timeline-item.completed .timeline-marker {
+      box-shadow: 0 0 0 2px #28a745;
+    }
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Animate timeline items
+      const timelineItems = document.querySelectorAll('.timeline-item');
+      timelineItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-10px)';
+        setTimeout(() => {
+          item.style.transition = 'all 0.3s ease';
+          item.style.opacity = '1';
+          item.style.transform = 'translateX(0)';
+        }, index * 200);
+      });
+    });

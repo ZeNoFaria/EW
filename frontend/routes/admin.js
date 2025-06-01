@@ -37,9 +37,13 @@ router.use((req, res, next) => {
 // Main admin dashboard (route: /admin)
 router.get("/", async (req, res) => {
   try {
-    // Use endpoints that exist - get basic stats from entries and users
-    const [entriesResponse, usersResponse] = await Promise.all([
-      axios.get(`${API_URL}/api/entries`).catch(() => ({ data: [] })),
+    // ATUALIZADO - Usar endpoints corretos da API
+    const [statsResponse, usersResponse] = await Promise.all([
+      axios
+        .get(`${API_URL}/api/admin/stats`, {
+          headers: { Authorization: `Bearer ${req.session.token}` },
+        })
+        .catch(() => ({ data: {} })),
       axios
         .get(`${API_URL}/api/users`, {
           headers: { Authorization: `Bearer ${req.session.token}` },
@@ -47,41 +51,35 @@ router.get("/", async (req, res) => {
         .catch(() => ({ data: [] })),
     ]);
 
-    const entries = Array.isArray(entriesResponse.data)
-      ? entriesResponse.data
-      : entriesResponse.data.entries || [];
+    const stats = statsResponse.data || {
+      totalEntries: 0,
+      totalUsers: 0,
+      totalAips: 0,
+      publicEntries: 0,
+      totalComments: 0,
+    };
 
     const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
-
-    // Calculate basic stats
-    const stats = {
-      overview: {
-        totalEntries: entries.length,
-        totalUsers: users.length,
-        publicEntries: entries.filter((entry) => entry.isPublic).length,
-        totalComments: 0, // Will be calculated if we have comments
-      },
-      recentEntries: entries.slice(0, 5).map((entry) => ({
-        id: entry._id,
-        title: entry.title,
-        date: entry.date
-          ? new Date(entry.date).toLocaleDateString()
-          : "No date",
-        author: entry.author?.username || "Unknown",
-      })),
-    };
 
     res.render("admin-dashboard", {
       ...siteConfig,
       title: "Admin Dashboard - Digital Diary",
       navItems: getNavWithActive(null),
-      stats,
+      stats: {
+        overview: {
+          totalEntries: stats.totalEntries || 0,
+          totalUsers: users.length,
+          totalAips: stats.totalAips || 0,
+          publicEntries: stats.publicEntries || 0,
+          totalComments: stats.totalComments || 0,
+        },
+        recentEntries: stats.recentEntries || [],
+      },
       users: users.slice(0, 10), // Show only first 10 users
     });
   } catch (err) {
     console.error("Error loading admin dashboard:", err.message);
 
-    // Render with minimal data in case of errors
     res.render("admin-dashboard", {
       ...siteConfig,
       title: "Admin Dashboard - Digital Diary",
@@ -90,6 +88,7 @@ router.get("/", async (req, res) => {
         overview: {
           totalEntries: 0,
           totalUsers: 0,
+          totalAips: 0,
           publicEntries: 0,
           totalComments: 0,
         },
@@ -125,7 +124,7 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// Update user role
+// Update user role - ATUALIZADO para usar endpoint correto
 router.post("/users/:id/role", async (req, res) => {
   try {
     const { role } = req.body;
@@ -143,79 +142,35 @@ router.post("/users/:id/role", async (req, res) => {
   }
 });
 
-// Basic stats page
+// NOVO - Detailed stats page
 router.get("/stats", async (req, res) => {
   try {
-    const [entriesResponse, usersResponse] = await Promise.all([
-      axios.get(`${API_URL}/api/entries`).catch(() => ({ data: [] })),
+    const period = req.query.period || "month";
+
+    const [detailedStatsResponse, exportResponse] = await Promise.all([
       axios
-        .get(`${API_URL}/api/users`, {
+        .get(`${API_URL}/api/admin/stats/detailed`, {
+          params: { period },
           headers: { Authorization: `Bearer ${req.session.token}` },
         })
-        .catch(() => ({ data: [] })),
+        .catch(() => ({ data: {} })),
+      axios
+        .get(`${API_URL}/api/admin/stats/export`, {
+          params: { type: "general", format: "json" },
+          headers: { Authorization: `Bearer ${req.session.token}` },
+        })
+        .catch(() => ({ data: {} })),
     ]);
 
-    const entries = Array.isArray(entriesResponse.data)
-      ? entriesResponse.data
-      : entriesResponse.data.entries || [];
-
-    const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
-
-    // Group entries by month for trends
-    const entriesByMonth = {};
-    entries.forEach((entry) => {
-      const date = new Date(entry.date || entry.createdAt);
-      const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-      entriesByMonth[monthKey] = (entriesByMonth[monthKey] || 0) + 1;
-    });
-
-    // Extract tags for stats
-    const tagCounts = {};
-    entries.forEach((entry) => {
-      if (entry.tags && Array.isArray(entry.tags)) {
-        entry.tags.forEach((tag) => {
-          const tagName = typeof tag === "string" ? tag : tag.name;
-          if (tagName) {
-            tagCounts[tagName] = (tagCounts[tagName] || 0) + 1;
-          }
-        });
-      }
-    });
-
-    const stats = {
-      overview: {
-        totalEntries: entries.length,
-        totalUsers: users.length,
-        totalTags: Object.keys(tagCounts).length,
-        avgEntriesPerUser:
-          users.length > 0
-            ? Math.round((entries.length / users.length) * 10) / 10
-            : 0,
-      },
-      entriesByMonth: Object.entries(entriesByMonth)
-        .map(([month, count]) => ({
-          month,
-          count,
-        }))
-        .sort((a, b) => b.month.localeCompare(a.month))
-        .slice(0, 12),
-      topTags: Object.entries(tagCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      recentUsers: users
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 10),
-    };
+    const stats = detailedStatsResponse.data || {};
 
     res.render("admin-stats", {
       ...siteConfig,
       title: "Detailed Statistics - Admin",
       navItems: getNavWithActive(null),
       stats,
-      period: req.query.period || "month",
+      period,
+      exportData: exportResponse.data,
     });
   } catch (err) {
     console.error("Error fetching detailed stats:", err.message);
@@ -225,6 +180,38 @@ router.get("/stats", async (req, res) => {
       message: "Error loading statistics",
       error: { status: 500 },
     });
+  }
+});
+
+// NOVO - Export stats
+router.get("/export", async (req, res) => {
+  try {
+    const { type = "general", format = "json" } = req.query;
+
+    const response = await axios.get(`${API_URL}/api/admin/stats/export`, {
+      params: { type, format },
+      headers: { Authorization: `Bearer ${req.session.token}` },
+      responseType: format === "csv" ? "stream" : "json",
+    });
+
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="stats-${type}-${Date.now()}.csv"`
+      );
+      response.data.pipe(res);
+    } else {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="stats-${type}-${Date.now()}.json"`
+      );
+      res.json(response.data);
+    }
+  } catch (err) {
+    console.error("Error exporting stats:", err.message);
+    res.redirect("/admin/stats?error=Error exporting statistics");
   }
 });
 

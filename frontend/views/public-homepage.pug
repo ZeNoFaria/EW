@@ -1,0 +1,148 @@
+extends layout
+
+block content
+  .container.mt-4
+    // Hero section para visitantes públicos
+    .row.mb-5
+      .col-12.text-center.py-5(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; color: white;")
+        h1.display-4.mb-3
+          i.fas.fa-book-open.me-3
+          | Digital Diary Archive
+        p.lead.mb-4 Explore public diary entries, digital memories, and archived materials
+        
+        if !isAuthenticated
+          .mt-4
+            a.btn.btn-light.btn-lg.me-3(href="/auth/login")
+              i.fas.fa-sign-in-alt.me-2
+              | Access Your Diary
+            a.btn.btn-outline-light.btn-lg(href="/auth/register")
+              i.fas.fa-user-plus.me-2
+              | Create Account
+
+    // Quick stats
+    .row.mb-5
+      .col-md-3.mb-3
+        .card.text-center.h-100
+          .card-body
+            i.fas.fa-file-alt.fa-2x.text-primary.mb-2
+            h4= entries.length
+            small.text-muted Recent Public Entries
+      .col-md-3.mb-3
+        .card.text-center.h-100
+          .card-body
+            i.fas.fa-archive.fa-2x.text-success.mb-2
+            h4 Digital
+            small.text-muted Archive System
+      .col-md-3.mb-3
+        .card.text-center.h-100
+          .card-body
+            i.fas.fa-tags.fa-2x.text-info.mb-2
+            h4= allTags.length
+            small.text-muted Active Tags
+      .col-md-3.mb-3
+        .card.text-center.h-100
+          .card-body
+            i.fas.fa-folder.fa-2x.text-warning.mb-2
+            h4= categories.length
+            small.text-muted Categories
+
+    .row
+      .col-md-8
+        .card
+          .card-header.d-flex.justify-content-between.align-items-center
+            h4.mb-0
+              i.fas.fa-clock.me-2
+              | Recent Public Entries
+            a.btn.btn-outline-primary.btn-sm(href="/public") View All
+          
+          .card-body
+            if entries && entries.length > 0
+              each entry in entries
+                .border-bottom.pb-3.mb-3
+                  .d-flex.justify-content-between.align-items-start
+                    div
+                      h5.mb-1
+                        a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                      p.text-muted.mb-2= entry.excerpt
+                      .d-flex.align-items-center
+                        small.text-muted.me-3
+                          i.fas.fa-calendar.me-1
+                          = entry.date
+                        if entry.category
+                          span.badge.bg-secondary.me-2= entry.category
+                        if entry.tags && entry.tags.length > 0
+                          each tag in entry.tags.slice(0, 3)
+                            span.badge.bg-light.text-dark.me-1
+                              = typeof tag === 'string' ? tag : tag.name
+                    .text-end
+                      a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`) Read
+            else
+              .text-center.py-5
+                i.fas.fa-book-open.fa-3x.text-muted.mb-3
+                h5.text-muted No public entries yet
+                p.text-muted Check back later for new content
+
+      .col-md-4
+        // Tags cloud
+        .card.mb-4
+          .card-header
+            h5.mb-0
+              i.fas.fa-tags.me-2
+              | Popular Tags
+          .card-body.tag-cloud
+            if allTags && allTags.length > 0
+              each tag in allTags.slice(0, 15)
+                a.badge.bg-light.text-dark.text-decoration-none.me-1.mb-1(
+                  href=`/public?tag=${tag.slug}`,
+                  style=`font-size: ${Math.max(0.8, Math.min(1.2, tag.count / 5))}rem`
+                )
+                  = tag.name
+                  span.text-muted.ms-1= `(${tag.count})`
+            else
+              p.text-muted.mb-0 No tags available
+
+        // Categories
+        .card.mb-4
+          .card-header
+            h5.mb-0
+              i.fas.fa-folder.me-2
+              | Categories
+          .card-body
+            if categories && categories.length > 0
+              each category in categories.slice(0, 8)
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  a.text-decoration-none(href=`/public?category=${category.slug || category.name}`)
+                    i.fas.fa-folder.me-2
+                    = category.name
+                  span.badge.bg-secondary= category.count || 0
+            else
+              p.text-muted.mb-0 No categories available
+
+        // Archive link
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-archive.me-2
+              | Digital Archive
+          .card-body
+            p Browse digitally preserved materials and historical entries.
+            a.btn.btn-outline-primary.w-100(href="/archive/public")
+              i.fas.fa-archive.me-2
+              | Explore Archive
+
+block scripts
+  script.
+    // Add some interactivity
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fade in cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.5s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });

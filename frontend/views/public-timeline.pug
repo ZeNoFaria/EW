@@ -1,0 +1,124 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-3
+          i.fas.fa-globe.me-2
+          | Public Timeline
+        p.text-muted Explore publicly shared diary entries and experiences
+
+    // Filters
+    .row.mb-4
+      .col-12
+        .card
+          .card-body
+            form.row.g-3(action="/public", method="GET")
+              .col-md-4
+                input.form-control(type="text", name="search", placeholder="Search entries...", value=filters.search || "")
+              .col-md-4
+                select.form-select(name="category")
+                  option(value="") All Categories
+                  each category in categories
+                    option(value=category.name, selected=filters.category === category.name)= category.name
+              .col-md-4
+                .d-flex.gap-2
+                  button.btn.btn-primary(type="submit")
+                    i.fas.fa-search.me-1
+                    | Filter
+                  a.btn.btn-outline-secondary(href="/public") Clear
+
+    // Timeline entries
+    .row
+      .col-md-8
+        if entries && entries.length > 0
+          each entry in entries
+            .timeline-item.mb-4
+              .card.shadow-sm
+                .card-body
+                  .d-flex.justify-content-between.align-items-start.mb-3
+                    div
+                      h5.card-title
+                        a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                      .d-flex.align-items-center.text-muted
+                        i.fas.fa-calendar.me-1
+                        small= entry.date
+                        if entry.category
+                          span.badge.bg-secondary.ms-2= entry.category
+                    .text-end
+                      span.badge.bg-success
+                        i.fas.fa-globe.me-1
+                        | Public
+
+                  p.card-text= entry.excerpt
+
+                  if entry.tags && entry.tags.length > 0
+                    .mb-3
+                      each tag in entry.tags.slice(0, 5)
+                        a.badge.bg-light.text-dark.text-decoration-none.me-1(href=`/public?tag=${typeof tag === 'string' ? tag.replace(/\s+/g, '-').toLowerCase() : tag.slug}`)
+                          = typeof tag === 'string' ? tag : tag.name
+
+                  .d-flex.justify-content-between.align-items-center
+                    a.btn.btn-outline-primary(href=`/entry/${entry.id}`)
+                      i.fas.fa-book-open.me-1
+                      | Read More
+                    .text-muted
+                      i.fas.fa-eye.me-1
+                      | Public entry
+        else
+          .text-center.py-5
+            i.fas.fa-search.fa-3x.text-muted.mb-3
+            h4.text-muted No entries found
+            p.text-muted Try adjusting your search or filter criteria
+
+      .col-md-4
+        // Categories sidebar
+        .card.mb-4
+          .card-header
+            h6.mb-0
+              i.fas.fa-folder.me-2
+              | Categories
+          .card-body
+            if categories && categories.length > 0
+              each category in categories
+                .d-flex.justify-content-between.align-items-center.mb-2
+                  a.text-decoration-none(href=`/public?category=${category.name}`)= category.name
+                  span.badge.bg-secondary= category.count || 0
+            else
+              p.text-muted.small No categories available
+
+        // Quick access
+        .card
+          .card-header
+            h6.mb-0
+              i.fas.fa-link.me-2
+              | Quick Access
+          .card-body
+            .d-grid.gap-2
+              a.btn.btn-outline-primary(href="/archive/public")
+                i.fas.fa-archive.me-2
+                | Browse Archive
+              a.btn.btn-outline-secondary(href="/browse")
+                i.fas.fa-search.me-2
+                | Browse by Content
+              if !isAuthenticated
+                a.btn.btn-success(href="/auth/login")
+                  i.fas.fa-sign-in-alt.me-2
+                  | Access Your Diary
+
+block scripts
+  script.
+    // Timeline animations
+    document.addEventListener('DOMContentLoaded', function() {
+      const timelineItems = document.querySelectorAll('.timeline-item');
+      timelineItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+          item.style.transition = 'all 0.4s ease';
+          item.style.opacity = '1';
+          item.style.transform = 'translateX(0)';
+        }, index * 150);
+      });
+    });

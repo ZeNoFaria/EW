@@ -1,0 +1,296 @@
+extends layout
+
+block content
+  .container.mt-4
+    // Hero section
+    .row.mb-5
+      .col-12.text-center
+        .py-5(style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; color: white;")
+          h1.display-4.mb-3 About Digital Diary
+          p.lead Your personal digital life archive and preservation system
+
+    .row
+      .col-md-8
+        // Mission section
+        .card.mb-4.shadow-sm
+          .card-body
+            h3.mb-3
+              i.fas.fa-bullseye.text-primary.me-2
+              | Our Mission
+            p.lead Digital Diary is designed to help you preserve, organize, and share your digital life experiences in a meaningful and accessible way.
+            
+            p Our platform combines personal diary functionality with digital preservation standards to ensure your memories and digital materials are safeguarded for the future.
+
+        // Features section
+        .card.mb-4.shadow-sm
+          .card-body
+            h3.mb-4
+              i.fas.fa-star.text-warning.me-2
+              | Key Features
+            
+            .row
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-primary.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px;")
+                      i.fas.fa-book
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Personal Diary
+                    p.text-muted.small Create and organize your personal diary entries with rich metadata and tagging.
+
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-success.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px;")
+                      i.fas.fa-share
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Public Sharing
+                    p.text-muted.small Selectively share your experiences with the public while keeping private content secure.
+
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-info.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px;")
+                      i.fas.fa-archive
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Digital Preservation
+                    p.text-muted.small OAIS-compliant digital preservation with SIP/AIP/DIP workflow for long-term access.
+
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-warning.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px;")
+                      i.fas.fa-search
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Semantic Navigation
+                    p.text-muted.small Browse your content by themes, content types, and semantic relationships.
+
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-purple.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px; background: #6f42c1;")
+                      i.fas.fa-tags
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Rich Metadata
+                    p.text-muted.small Comprehensive tagging and categorization system for better organization.
+
+              .col-md-6.mb-3
+                .d-flex
+                  .flex-shrink-0
+                    .bg-dark.rounded-circle.text-white.d-flex.align-items-center.justify-content-center(style="width: 40px; height: 40px;")
+                      i.fas.fa-clock
+                  .flex-grow-1.ms-3
+                    h5.mb-1 Timeline View
+                    p.text-muted.small Chronological organization of your digital life with beautiful timeline interfaces.
+
+        // Technology section
+        .card.mb-4.shadow-sm
+          .card-body
+            h3.mb-4
+              i.fas.fa-cogs.text-info.me-2
+              | Technology & Standards
+            
+            p We use industry-standard technologies and preservation practices:
+            
+            .row.mt-4
+              .col-md-6
+                h5.mb-3 Digital Preservation
+                ul.list-unstyled
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong OAIS Reference Model
+                    .small.text-muted Open Archival Information System compliance
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong SIP/AIP/DIP Workflow
+                    .small.text-muted Submission, Archival, and Dissemination packages
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong Format Migration
+                    .small.text-muted Automated preservation of digital formats
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong Checksum Validation
+                    .small.text-muted Integrity verification and monitoring
+
+              .col-md-6
+                h5.mb-3 Web Technologies
+                ul.list-unstyled
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong Node.js & Express
+                    .small.text-muted Robust backend framework
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong MongoDB
+                    .small.text-muted Flexible document database
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong Bootstrap 5
+                    .small.text-muted Modern responsive design
+                  li.mb-2
+                    i.fas.fa-check.text-success.me-2
+                    strong JWT Authentication
+                    .small.text-muted Secure user sessions
+
+        // Privacy and Security
+        .card.mb-4.shadow-sm
+          .card-body
+            h3.mb-3
+              i.fas.fa-shield-alt.text-success.me-2
+              | Privacy & Security
+            
+            p Your privacy and data security are our top priorities. Here's how we protect your information:
+            
+            .row.mt-4
+              .col-md-6
+                h6.mb-2 Data Protection
+                ul.list-unstyled.small
+                  li.mb-1
+                    i.fas.fa-lock.text-primary.me-2
+                    | Encrypted data transmission (HTTPS)
+                  li.mb-1
+                    i.fas.fa-lock.text-primary.me-2
+                    | Secure password hashing
+                  li.mb-1
+                    i.fas.fa-lock.text-primary.me-2
+                    | Regular security updates
+                  li.mb-1
+                    i.fas.fa-lock.text-primary.me-2
+                    | Access controls and permissions
+
+              .col-md-6
+                h6.mb-2 Privacy Controls
+                ul.list-unstyled.small
+                  li.mb-1
+                    i.fas.fa-eye.text-info.me-2
+                    | Granular visibility settings
+                  li.mb-1
+                    i.fas.fa-eye.text-info.me-2
+                    | Public/private content control
+                  li.mb-1
+                    i.fas.fa-eye.text-info.me-2
+                    | User data ownership
+                  li.mb-1
+                    i.fas.fa-eye.text-info.me-2
+                    | Right to data portability
+
+      .col-md-4
+        // Quick stats
+        .card.mb-4.shadow-sm
+          .card-header.text-center.bg-primary.text-white
+            h5.mb-0
+              i.fas.fa-chart-bar.me-2
+              | Platform Statistics
+          .card-body.text-center
+            .row
+              .col-12.mb-3
+                h3.text-primary 1,247
+                small.text-muted Total Diary Entries
+              .col-12.mb-3
+                h3.text-success 892
+                small.text-muted Preserved Packages
+              .col-12.mb-3
+                h3.text-info 156
+                small.text-muted Active Users
+              .col-12
+                h3.text-warning 43
+                small.text-muted Public Archives
+
+        // Contact and support
+        .card.mb-4.shadow-sm
+          .card-header
+            h5.mb-0
+              i.fas.fa-envelope.me-2
+              | Get in Touch
+          .card-body
+            p.small Have questions or need help? We're here to assist you.
+            
+            .d-grid.gap-2
+              a.btn.btn-outline-primary.btn-sm(href="mailto:support@digitalDiary.com")
+                i.fas.fa-envelope.me-2
+                | Email Support
+              a.btn.btn-outline-secondary.btn-sm(href="/help")
+                i.fas.fa-question-circle.me-2
+                | Help Center
+              a.btn.btn-outline-info.btn-sm(href="/docs")
+                i.fas.fa-book.me-2
+                | Documentation
+
+        // Version info
+        .card.shadow-sm
+          .card-header
+            h6.mb-0
+              i.fas.fa-code.me-2
+              | Version Information
+          .card-body.small
+            .d-flex.justify-content-between.mb-2
+              span Version:
+              strong v2.1.0
+            .d-flex.justify-content-between.mb-2
+              span Released:
+              strong June 2025
+            .d-flex.justify-content-between.mb-2
+              span License:
+              strong MIT
+            .d-flex.justify-content-between
+              span Repository:
+              a.small(href="https://github.com/university/digital-diary", target="_blank") GitHub
+
+    // Footer info
+    .row.mt-5
+      .col-12
+        .card.border-0.bg-light
+          .card-body.text-center.py-4
+            h4.mb-3 Ready to start preserving your digital life?
+            p.text-muted Join thousands of users who trust Digital Diary to safeguard their memories and experiences.
+            
+            if !isAuthenticated
+              .mt-4
+                a.btn.btn-primary.btn-lg.me-3(href="/auth/register")
+                  i.fas.fa-user-plus.me-2
+                  | Create Account
+                a.btn.btn-outline-secondary.btn-lg(href="/public")
+                  i.fas.fa-globe.me-2
+                  | Explore Public Content
+            else
+              .mt-4
+                a.btn.btn-primary.btn-lg.me-3(href="/dashboard")
+                  i.fas.fa-tachometer-alt.me-2
+                  | Go to Dashboard
+                a.btn.btn-outline-secondary.btn-lg(href="/entry/new")
+                  i.fas.fa-plus.me-2
+                  | Create Entry
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Animate feature cards
+      const featureCards = document.querySelectorAll('.card');
+      featureCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.6s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 150);
+      });
+
+      // Counter animation for stats
+      const statNumbers = document.querySelectorAll('.text-primary, .text-success, .text-info, .text-warning');
+      statNumbers.forEach(stat => {
+        const target = parseInt(stat.textContent.replace(/,/g, ''));
+        let current = 0;
+        const increment = target / 100;
+        const timer = setInterval(() => {
+          current += increment;
+          if (current >= target) {
+            stat.textContent = target.toLocaleString();
+            clearInterval(timer);
+          } else {
+            stat.textContent = Math.floor(current).toLocaleString();
+          }
+        }, 20);
+      });
+    });
