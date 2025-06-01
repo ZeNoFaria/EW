@@ -10,13 +10,12 @@ const siteConfig = {
   title: "Digital Diary",
 };
 
-// ALTERAR - Navigation items separados por público/privado
+// Navigation items separados por público/privado
 const getPublicNavItems = () => [
   { text: "Home", url: "/", active: false },
   { text: "Public Timeline", url: "/public", active: false },
   { text: "Browse Archive", url: "/archive/public", active: false },
   { text: "Browse Content", url: "/browse", active: false },
-  { text: "About", url: "/about", active: false },
 ];
 
 const getPrivateNavItems = () => [
@@ -28,7 +27,7 @@ const getPrivateNavItems = () => [
   { text: "Browse Content", url: "/browse", active: false },
 ];
 
-// ALTERAR - Helper function to set active navigation item
+// Helper function to set active navigation item
 const getNavWithActive = (activeUrl, isPublicArea = false) => {
   const navItems = isPublicArea ? getPublicNavItems() : getPrivateNavItems();
   return navItems.map((item) => ({
@@ -123,7 +122,7 @@ router.get("/", async function (req, res, next) {
     });
   } catch (err) {
     console.error("Error on homepage:", err.message);
-    res.render("public-homepage", {
+    res.render("public- ", {
       ...siteConfig,
       title: "Digital Diary - Public Archive",
       navItems: getNavWithActive("/", true),
@@ -733,6 +732,110 @@ router.post("/entry/new", async (req, res) => {
   }
 });
 
+// ADICIONAR - GET route para edit entry (ANTES da rota /entry/:id)
+router.get("/entry/:id/edit", async (req, res) => {
+  if (!req.session.token) {
+    return res.redirect("/auth/login?error=Please login to edit entries");
+  }
+
+  try {
+    const headers = { Authorization: `Bearer ${req.session.token}` };
+
+    // Buscar a entrada e as categorias
+    const [entryResponse, categoriesResponse] = await Promise.all([
+      axios.get(`${API_URL}/api/entries/${req.params.id}`, { headers }),
+      axios.get(`${API_URL}/api/categories`).catch(() => ({ data: [] })),
+    ]);
+
+    const entry = entryResponse.data;
+    const categories = categoriesResponse.data || [];
+
+    // Verificar se o utilizador pode editar esta entrada
+    const isOwner =
+      req.session.user &&
+      (req.session.user.id === entry.author?._id ||
+        req.session.user.id === entry.createdBy?._id ||
+        req.session.user.id === entry.userId);
+
+    const isAdmin = req.session.user?.isAdmin;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).render("error", {
+        ...siteConfig,
+        title: "Access Denied",
+        navItems: getNavWithActive(null, false),
+        errorMessage: "You don't have permission to edit this entry",
+        statusCode: 403,
+        isPublicArea: false,
+      });
+    }
+
+    // Formatar entrada para o formulário
+    const formattedEntry = {
+      ...entry,
+      id: entry._id || entry.id,
+      date: entry.date
+        ? new Date(entry.date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      tags: Array.isArray(entry.tags)
+        ? entry.tags
+            .map((tag) => (typeof tag === "string" ? tag : tag.name))
+            .join(", ")
+        : "",
+      category: entry.category?._id || entry.category || "",
+    };
+
+    res.render("entry-form", {
+      ...siteConfig,
+      title: `Edit "${entry.title}" - Digital Diary`,
+      navItems: getNavWithActive(null, false),
+      categories,
+      isEdit: true,
+      entry: formattedEntry,
+      errorMessage: req.query.error
+        ? decodeURIComponent(req.query.error)
+        : null,
+      successMessage: req.query.message
+        ? decodeURIComponent(req.query.message)
+        : null,
+      isPublicArea: false,
+    });
+  } catch (err) {
+    console.error(
+      "Error loading entry for edit:",
+      err.response?.data || err.message
+    );
+
+    if (err.response?.status === 404) {
+      return res.status(404).render("error", {
+        ...siteConfig,
+        title: "Entry Not Found",
+        navItems: getNavWithActive(null, false),
+        errorMessage: "The entry you're trying to edit was not found",
+        statusCode: 404,
+        isPublicArea: false,
+      });
+    }
+
+    if (err.response?.status === 403) {
+      return res.status(403).render("error", {
+        ...siteConfig,
+        title: "Access Denied",
+        navItems: getNavWithActive(null, false),
+        errorMessage: "You don't have permission to edit this entry",
+        statusCode: 403,
+        isPublicArea: false,
+      });
+    }
+
+    const errorMessage =
+      err.response?.data?.message || "Error loading entry for editing";
+    res.redirect(
+      `/entry/${req.params.id}?error=${encodeURIComponent(errorMessage)}`
+    );
+  }
+});
+
 // Edit entry page - MUST BE BEFORE /entry/:id
 router.post("/entry/:id/edit", async (req, res) => {
   if (!req.session.token) {
@@ -893,6 +996,7 @@ router.get("/entry/:id", async (req, res) => {
 // ====== OTHER ROUTES ======
 
 router.get("/timeline", async (req, res) => {
+  // VERIFICAR SE ESTÁ LOGADO
   if (!req.session.token) {
     return res.redirect("/public");
   }
@@ -991,7 +1095,8 @@ router.get("/timeline", async (req, res) => {
     res.render("timeline", {
       ...siteConfig,
       title: "My Timeline - Digital Diary",
-      navItems: getNavWithActive("/timeline", true),
+      // CORRIGIDO - Navegação privada correta
+      navItems: getNavWithActive("timeline", true), // true = logado, "timeline" = página ativa
       entries: timelineEntries,
       categories: categoriesWithCounts,
       allTags: tagsWithCounts,
@@ -1001,7 +1106,7 @@ router.get("/timeline", async (req, res) => {
       currentTag: tag || "all",
       isAuthenticated: true,
       user: req.session.user,
-      isPublicArea: false,
+      isPublicArea: false, // IMPORTANTE: não é área pública
     });
   } catch (err) {
     console.error("Timeline error:", err.response?.data || err.message);
@@ -1010,7 +1115,8 @@ router.get("/timeline", async (req, res) => {
     res.render("timeline", {
       ...siteConfig,
       title: "My Timeline - Digital Diary",
-      navItems: getNavWithActive("/timeline", true),
+      // CORRIGIDO - Navegação privada mesmo em erro
+      navItems: getNavWithActive("timeline", true),
       entries: [],
       categories: [],
       allTags: [],
@@ -1082,16 +1188,6 @@ router.get("/categories", async (req, res) => {
       error: { status: 500 },
     });
   }
-});
-
-// About route
-router.get("/about", (req, res) => {
-  res.render("about", {
-    ...siteConfig,
-    title: "About - Digital Diary",
-    navItems: getNavWithActive("/about", res.locals.isPublicArea),
-    isPublicArea: res.locals.isPublicArea,
-  });
 });
 
 // Simplified search route

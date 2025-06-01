@@ -17,7 +17,6 @@ const getNavWithActive = (activeUrl, isPublicArea = false) => {
     { text: "Public Timeline", url: "/public", active: false },
     { text: "Browse Archive", url: "/archive/public", active: false },
     { text: "Browse Content", url: "/browse", active: false },
-    { text: "About", url: "/about", active: false },
   ];
 
   const privateNavItems = [

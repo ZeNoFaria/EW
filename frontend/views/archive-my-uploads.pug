@@ -131,12 +131,7 @@ block content
                             a.dropdown-item(href=`/archive/aip/${aip._id}/edit`)
                               i.fas.fa-edit.me-2
                               | Edit Metadata
-                          li
-                            a.dropdown-item(href="#", onclick=`toggleVisibility('${aip._id}', ${aip.metadata ? aip.metadata.isPublic : false})`)
-                              i(class=aip.metadata && aip.metadata.isPublic ? "fas fa-eye-slash" : "fas fa-eye").me-2
-                              = aip.metadata && aip.metadata.isPublic ? "Make Private" : "Make Public"
-                          li: hr.dropdown-divider
-                          li
+                            li
                             a.dropdown-item.text-danger(href="#", onclick=`confirmDelete('${aip._id}')`)
                               i.fas.fa-trash.me-2
                               | Delete

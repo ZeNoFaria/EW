@@ -12,7 +12,7 @@ const siteConfig = {
 // Navigation items (match the main navigation)
 const navItems = [
   { text: "Homepage", url: "/", active: false },
-  { text: "Timeline", url: "/timeline", active: false },
+  { text: "My Timeline", url: "/timeline", active: false },
   { text: "Categories", url: "/categories", active: false },
   { text: "About", url: "/about", active: false },
 ];

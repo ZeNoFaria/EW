@@ -48,13 +48,6 @@ block content
                       i.fas.fa-edit.me-1
                       | Edit Entry
                     
-                    // Toggle visibility
-                    form.d-inline(action=`/entry/${entry.id}/visibility`, method="POST")
-                      input(type="hidden", name="isPublic", value=entry.isPublic ? "false" : "true")
-                      button.btn.btn-outline-secondary.btn-sm(type="submit")
-                        i(class=entry.isPublic ? "fas fa-eye-slash" : "fas fa-eye").me-1
-                        = entry.isPublic ? "Make Private" : "Make Public"
-                    
                     button.btn.btn-outline-danger.btn-sm(type="button", data-bs-toggle="modal", data-bs-target="#deleteModal")
                       i.fas.fa-trash.me-1
                       | Delete

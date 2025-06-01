@@ -25,7 +25,7 @@ block content
         .card.text-center.h-100
           .card-body
             i.fas.fa-file-alt.fa-2x.text-primary.mb-2
-            h4= entries.length
+            h4= entries ? entries.length : 0
             small.text-muted Recent Public Entries
       .col-md-3.mb-3
         .card.text-center.h-100
@@ -37,13 +37,13 @@ block content
         .card.text-center.h-100
           .card-body
             i.fas.fa-tags.fa-2x.text-info.mb-2
-            h4= allTags.length
+            h4= allTags ? allTags.length : 0
             small.text-muted Active Tags
       .col-md-3.mb-3
         .card.text-center.h-100
           .card-body
             i.fas.fa-folder.fa-2x.text-warning.mb-2
-            h4= categories.length
+            h4= categories ? categories.length : 0
             small.text-muted Categories
 
     .row

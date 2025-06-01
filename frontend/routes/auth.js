@@ -13,10 +13,9 @@ const siteConfig = {
 // Navigation items
 const navItems = [
   { text: "Homepage", url: "/", active: false },
-  { text: "Timeline", url: "/timeline", active: false },
+  { text: "My Timeline", url: "/timeline", active: false },
   { text: "Categories", url: "/categories", active: false },
   { text: "Tags", url: "/tags", active: false },
-  { text: "About", url: "/about", active: false },
 ];
 
 const getNavWithActive = (activeUrl) => {
