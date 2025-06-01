@@ -4,33 +4,138 @@ block content
   .container.mt-4
     .row.mb-4
       .col-12
-        h2 Search Results
-        p.lead Showing results for: <strong>#{query}</strong>
+        h2.mb-4 Search Results
+        if query
+          p.lead= `Results for "${query}"`
+        else if currentTag && currentTag !== "all"
+          p.lead= `Entries tagged with "${currentTag}"`
+        else
+          p.lead Search through all entries
 
-        if resultsCount > 0
-          p.text-muted Found #{resultsCount} results
+        // Search form
+        .row.mb-4
+          .col-md-8
+            .input-group
+              input.form-control#search-input(
+                type="text" 
+                placeholder="Search entries..." 
+                value=query || ""
+              )
+              button.btn.btn-primary(onclick="performSearch()") 
+                i.fas.fa-search.me-1
+                | Search
 
-          .timeline
+        // Tag filters
+        if allTags && allTags.length > 0
+          .row.mb-4
+            .col-12
+              h6 Filter by Tags:
+              .d-flex.flex-wrap.gap-2
+                button.btn.btn-sm(
+                  class=currentTag === "all" || !currentTag ? "btn-primary" : "btn-outline-primary"
+                  onclick="filterByTag('all')"
+                ) All
+                each tag in allTags
+                  button.btn.btn-sm(
+                    class=currentTag === tag.slug ? "btn-primary" : "btn-outline-primary"
+                    onclick=`filterByTag('${tag.slug}')`
+                  )
+                    = tag.name
+                    span.badge.bg-light.text-dark.ms-1= tag.count
+
+        // Results count
+        if results && results.length > 0
+          .row.mb-3
+            .col-12
+              p.text-muted= `Found ${resultsCount} ${resultsCount === 1 ? 'result' : 'results'}`
+
+        // Search results
+        if results && results.length > 0
+          .search-results
             each entry in results
-              .card.mb-4.shadow-sm
+              .card.mb-3.shadow-sm
                 .card-body
-                  .row
-                    .col-md-2.text-center
-                      .badge.bg-primary.fs-6= entry.date
-                    .col-md-10
-                      h4.card-title= entry.title
-                      p.card-text= entry.excerpt
+                  h5.card-title
+                    a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                  
+                  if entry.excerpt
+                    p.card-text= entry.excerpt
+                  
+                  .d-flex.justify-content-between.align-items-center
+                    div
+                      small.text-muted= entry.date
+                      if entry.category && entry.category !== "Uncategorized"
+                        span.badge.bg-info.ms-2= entry.category
                       
                       if entry.tags && entry.tags.length
-                        .mb-3
-                          each tag in entry.tags
-                            span.badge.bg-secondary.me-1= tag
-                      
-                      a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`) Read More
+                        .mt-2
+                          each tag in entry.tags.slice(0, 3)
+                            - var tagName = typeof tag === 'string' ? tag : tag.name || tag
+                            - var tagSlug = tagName.toLowerCase().replace(/\s+/g, '-')
+                            span.badge.bg-secondary.me-1(
+                              onclick=`filterByTag('${tagSlug}')`
+                              style="cursor: pointer;"
+                            )= tagName
+                    
+                    a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`) Read More
         else
           .text-center.py-5
             i.fas.fa-search.fa-3x.text-muted.mb-3
-            p.text-muted.fs-5= noResultsMessage || "No results found for your search."
-            
-        .mt-4
-          a.btn.btn-secondary(href="/") Back to Homepage
+            h3.text-muted= noResultsMessage || "No results found"
+            if query || currentTag
+              p.text-muted Try different search terms or browse all entries.
+              a.btn.btn-primary(href="/timeline") Browse All Entries
+            else
+              p.text-muted Enter a search term above to find entries.
+
+        // Simple pagination
+        if pagination && pagination.totalPages > 1
+          nav.mt-4
+            ul.pagination.justify-content-center
+              if pagination.currentPage > 1
+                li.page-item
+                  a.page-link(href=`?page=${pagination.currentPage - 1}${query ? '&q=' + encodeURIComponent(query) : ''}${currentTag ? '&tag=' + currentTag : ''}`) Previous
+              else
+                li.page-item.disabled
+                  span.page-link Previous
+              
+              li.page-item.active
+                span.page-link= pagination.currentPage
+              
+              if pagination.currentPage < pagination.totalPages
+                li.page-item
+                  a.page-link(href=`?page=${pagination.currentPage + 1}${query ? '&q=' + encodeURIComponent(query) : ''}${currentTag ? '&tag=' + currentTag : ''}`) Next
+              else
+                li.page-item.disabled
+                  span.page-link Next
+
+block scripts
+  script.
+    function performSearch() {
+      const query = document.getElementById('search-input').value;
+      if (query.trim()) {
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+      }
+    }
+    
+    function filterByTag(tagSlug) {
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (tagSlug === 'all') {
+        params.delete('tag');
+      } else {
+        params.set('tag', tagSlug);
+      }
+      
+      params.delete('page'); // Reset pagination
+      currentUrl.search = params.toString();
+      window.location.href = currentUrl.toString();
+    }
+    
+    // Allow search on Enter key
+    document.getElementById('search-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });

@@ -1,0 +1,166 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.justify-content-center
+      .col-md-8
+        .card
+          .card-header
+            h3.mb-0
+              if isEdit
+                i.fas.fa-edit.me-2
+                | Edit Entry
+              else
+                i.fas.fa-plus.me-2
+                | Create New Entry
+          
+          .card-body
+            // Display errors or messages
+            if errorMessage
+              .alert.alert-danger= errorMessage
+            if successMessage
+              .alert.alert-success= successMessage
+
+            form(method="POST")
+              .mb-3
+                label.form-label(for="title") Title *
+                input.form-control#title(
+                  type="text" 
+                  name="title" 
+                  value=entry ? entry.title : ""
+                  required
+                  placeholder="Enter entry title"
+                )
+              
+              .mb-3
+                label.form-label(for="date") Date
+                input.form-control#date(
+                  type="date" 
+                  name="date" 
+                  value=entry ? (entry.date ? new Date(entry.date).toISOString().split('T')[0] : "") : new Date().toISOString().split('T')[0]
+                )
+              
+              .row.mb-3
+                .col-md-6
+                  label.form-label(for="category") Category
+                  select.form-select#category(name="category")
+                    option(value="") Select a category
+                    each category in categories
+                      option(
+                        value=category._id || category.id
+                        selected=entry && (entry.category === category._id || entry.category === category.name)
+                      )= category.name
+                
+                .col-md-6
+                  label.form-label(for="tags") Tags
+                  input.form-control#tags(
+                    type="text" 
+                    name="tags" 
+                    value=entry && entry.tags ? (Array.isArray(entry.tags) ? entry.tags.map(tag => typeof tag === 'string' ? tag : tag.name).join(', ') : entry.tags) : ""
+                    placeholder="Enter tags separated by commas"
+                  )
+                  small.form-text.text-muted Separate multiple tags with commas
+
+              // ADICIONAR ESTE CAMPO ISPUBLIC
+              .mb-3
+                .form-check
+                  input.form-check-input#isPublic(
+                    type="checkbox" 
+                    name="isPublic"
+                    checked=entry && entry.isPublic
+                  )
+                  label.form-check-label(for="isPublic")
+                    i.fas.fa-globe.me-2
+                    | Make this entry public
+                  small.form-text.text-muted.d-block.mt-1
+                    | Public entries can be viewed by anyone. Private entries are only visible to you.
+
+              .mb-4
+                label.form-label(for="content") Content *
+                textarea.form-control#content(
+                  name="content" 
+                  rows="10" 
+                  required
+                  placeholder="Write your entry content here..."
+                )= entry ? entry.content : ""
+
+              .d-flex.justify-content-between
+                div
+                  if isEdit
+                    a.btn.btn-outline-secondary(href=`/entry/${entry._id || entry.id}`) Cancel
+                  else
+                    a.btn.btn-outline-secondary(href="/") Cancel
+                
+                div
+                  if isEdit
+                    button.btn.btn-primary(type="submit")
+                      i.fas.fa-save.me-1
+                      | Update Entry
+                  else
+                    button.btn.btn-primary(type="submit")
+                      i.fas.fa-plus.me-1
+                      | Create Entry
+
+block scripts
+  script.
+    // Auto-resize textarea
+    const textarea = document.getElementById('content');
+    if (textarea) {
+      textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+      });
+      
+      // Trigger resize on load if there's content
+      if (textarea.value) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      }
+    }
+    
+    // Visual feedback for public/private status
+    const isPublicCheckbox = document.getElementById('isPublic');
+    const updatePublicStatus = () => {
+      const label = document.querySelector('label[for="isPublic"]');
+      const icon = label.querySelector('i');
+      
+      if (isPublicCheckbox.checked) {
+        icon.className = 'fas fa-globe me-2 text-success';
+        label.classList.add('text-success');
+      } else {
+        icon.className = 'fas fa-lock me-2 text-muted';
+        label.classList.remove('text-success');
+        label.classList.add('text-muted');
+      }
+    };
+    
+    isPublicCheckbox.addEventListener('change', updatePublicStatus);
+    updatePublicStatus(); // Set initial state
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      
+      if (!title) {
+        alert('Please enter a title for your entry.');
+        e.preventDefault();
+        return;
+      }
+      
+      if (!content) {
+        alert('Please enter some content for your entry.');
+        e.preventDefault();
+        return;
+      }
+      
+      // Show confirmation for public entries
+      if (isPublicCheckbox.checked) {
+        const confirmed = confirm('Are you sure you want to make this entry public? Anyone will be able to view it.');
+        if (!confirmed) {
+          e.preventDefault();
+          return;
+        }
+      }
+    });

@@ -22,6 +22,7 @@ const taxonomyRoutes = require("./routes/taxonomyRoutes");
 const newsRoutes = require("./routes/newsRoutes");
 const userRoutes = require("./routes/userRoutes");
 const socialRoutes = require("./routes/socialRoutes");
+const tagRoutes = require("./routes/tagRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -87,6 +88,7 @@ app.use("/api/taxonomy", taxonomyRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/social", socialRoutes);
+app.use("/api/tags", tagRoutes);
 
 app.use(
   "/api-docs",
@@ -122,18 +124,23 @@ app.get("/", (req, res) => {
 });
 
 // Initialize with sample data if database is empty
+// Initialize with sample data if database is empty
 const initializeData = async () => {
   try {
     const Category = require("./models/categorySchema");
     const Entry = require("./models/entrySchema");
     const Tag = require("./models/tagSchema");
     const User = require("./models/userSchema");
-    const Taxonomy = require("./models/taxonomySchema"); // Adicionar
+    const Taxonomy = require("./models/taxonomySchema");
     const bcrypt = require("bcryptjs");
 
     const categoryCount = await Category.countDocuments();
     const userCount = await User.countDocuments();
-    const taxonomyCount = await Taxonomy.countDocuments(); // Adicionar
+    const taxonomyCount = await Taxonomy.countDocuments();
+    const entryCount = await Entry.countDocuments();
+
+    let adminUser;
+
     // Create admin user if none exists
     if (userCount === 0) {
       console.log("Creating admin user...");
@@ -141,7 +148,7 @@ const initializeData = async () => {
       const hashedPassword = await bcrypt.hash("admin123", salt);
 
       try {
-        await User.create({
+        adminUser = await User.create({
           username: "admin",
           email: "admin@example.com",
           password: hashedPassword,
@@ -155,9 +162,16 @@ const initializeData = async () => {
       } catch (err) {
         if (err.code === 11000) {
           console.log("Admin user already exists, skipping creation");
+          adminUser = await User.findOne({ username: "admin" });
         } else {
           throw err;
         }
+      }
+    } else {
+      // Get existing admin user
+      adminUser = await User.findOne({ username: "admin" });
+      if (!adminUser) {
+        adminUser = await User.findOne({ isAdmin: true });
       }
     }
 
@@ -245,36 +259,78 @@ const initializeData = async () => {
         { name: "Photos" },
       ]);
 
-      // Create entries
-      await Entry.insertMany([
-        {
-          title: "Finished My Web Engineering Project",
-          content:
-            "Today I completed the final submission for my Web Engineering course. It was challenging but rewarding!",
-          date: new Date("2025-05-04"),
-          category: categories[0]._id,
-          tags: [tags[0]._id],
-        },
-        {
-          title: "10K Training Run",
-          content:
-            "Completed a 10K training run today in preparation for the upcoming marathon. Feeling great!",
-          date: new Date("2025-05-01"),
-          category: categories[1]._id,
-          tags: [tags[1]._id],
-        },
-        {
-          title: "Trip to the Mountains",
-          content:
-            "Spent the weekend hiking in the mountains with friends. The views were amazing!",
-          date: new Date("2025-04-28"),
-          category: categories[2]._id,
-          tags: [tags[2]._id, tags[3]._id],
-        },
-      ]);
-
-      console.log("Sample data initialized!");
+      console.log("Categories and tags created!");
     }
+
+    // Create sample entries if none exist and we have an admin user
+    if (entryCount === 0 && adminUser) {
+      console.log("Creating sample entries...");
+
+      // Get existing categories and tags
+      const categories = await Category.find();
+      const tags = await Tag.find();
+
+      if (categories.length > 0 && tags.length > 0) {
+        await Entry.insertMany([
+          {
+            title: "Finished My Web Engineering Project",
+            content:
+              "Today I completed the final submission for my Web Engineering course. It was challenging but rewarding!",
+            date: new Date("2025-05-04"),
+            category: categories[0]._id,
+            tags: [tags[0]._id],
+            author: adminUser._id,
+            isPublic: true,
+          },
+          {
+            title: "10K Training Run",
+            content:
+              "Completed a 10K training run today in preparation for the upcoming marathon. Feeling great!",
+            date: new Date("2025-05-01"),
+            category: categories[1]._id,
+            tags: [tags[1]._id],
+            author: adminUser._id,
+            isPublic: true,
+          },
+          {
+            title: "Trip to the Mountains",
+            content:
+              "Spent the weekend hiking in the mountains with friends. The views were amazing!",
+            date: new Date("2025-04-28"),
+            category: categories[2]._id,
+            tags: [tags[2]._id, tags[3]._id],
+            author: adminUser._id,
+            isPublic: true,
+          },
+          {
+            title: "Learning Docker and Kubernetes",
+            content:
+              "Started a new course on containerization technologies. Docker seems very powerful for development workflows.",
+            date: new Date("2025-05-02"),
+            category: categories[0]._id,
+            tags: [tags[0]._id],
+            author: adminUser._id,
+            isPublic: false,
+          },
+          {
+            title: "Personal Reflection",
+            content:
+              "Taking some time to reflect on my goals and what I want to achieve this year. Setting new priorities.",
+            date: new Date("2025-04-30"),
+            category: categories[3]._id,
+            tags: [],
+            author: adminUser._id,
+            isPublic: false,
+          },
+        ]);
+
+        console.log("Sample entries created!");
+      } else {
+        console.log("No categories or tags found, skipping entry creation");
+      }
+    }
+
+    console.log("Sample data initialization completed!");
   } catch (error) {
     console.error("Error initializing data:", error);
   }

@@ -43,10 +43,15 @@ html(lang="en")
                     a.dropdown-item(href="/auth/profile")
                       i.fas.fa-user.me-2
                       | Profile
+                  if user.isAdmin
+                    li
+                      a.dropdown-item(href="/admin")
+                        i.fas.fa-tachometer-alt.me-2
+                        | Admin Dashboard
                   li
-                    a.dropdown-item(href="/dashboard")
-                      i.fas.fa-tachometer-alt.me-2
-                      | Dashboard
+                    a.dropdown-item(href="/entry/new")
+                      i.fas.fa-plus.me-2
+                      | New Entry
                   li
                     hr.dropdown-divider
                   li
@@ -102,25 +107,10 @@ html(lang="en")
       .container
         .row
           .col-md-6
-            h5.text-primary= siteName || "Digital Diary"
-            p.mb-0 A personal digital diary to capture and organize your memories.
-          .col-md-3
-            h6 Quick Links
-            ul.list-unstyled
-              li: a.text-light.text-decoration-none(href="/") Home
-              li: a.text-light.text-decoration-none(href="/timeline") Timeline
-              li: a.text-light.text-decoration-none(href="/categories") Categories
-              li: a.text-light.text-decoration-none(href="/tags") Tags
-          .col-md-3
-            h6 Connect
-            .social-links
-              a.text-light.me-3(href="#", aria-label="Facebook")
-                i.fab.fa-facebook
-              a.text-light.me-3(href="#", aria-label="Twitter")
-                i.fab.fa-twitter
-              a.text-light.me-3(href="#", aria-label="Instagram")
-                i.fab.fa-instagram
-        hr.my-4
+            h5 Digital Diary
+            p.mb-0 A personal diary application to keep your thoughts and memories organized.
+            p.mb-0 Small, fast, and secure. Built with Node.js and Pug.
+
         .text-center
           p.mb-0.small &copy; #{new Date().getFullYear()} Digital Diary. All rights reserved.
 

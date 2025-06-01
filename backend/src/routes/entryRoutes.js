@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const entryController = require("../controllers/entryController");
-const { protect } = require("../middleware/auth");
+const { protect, optionalAuth } = require("../middleware/auth");
+const { logAction } = require("../middleware/logger");
 
 /**
  * @swagger
@@ -38,24 +39,6 @@ const { protect } = require("../middleware/auth");
 
 /**
  * @swagger
- * /entries:
- *   get:
- *     summary: Get all entries
- *     tags: [Entries]
- *     responses:
- *       200:
- *         description: The list of entries
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Entry'
- */
-router.get("/", entryController.getAllEntries);
-
-/**
- * @swagger
  * /entries/{id}:
  *   get:
  *     summary: Get entry by ID
@@ -77,29 +60,7 @@ router.get("/", entryController.getAllEntries);
  *       404:
  *         description: Entry not found
  */
-router.get("/:id", entryController.getEntryById);
-
-/**
- * @swagger
- * /entries:
- *   post:
- *     summary: Create a new entry
- *     tags: [Entries]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Entry'
- *     responses:
- *       201:
- *         description: The created entry
- *       401:
- *         description: Not authenticated
- */
-router.post("/", protect, entryController.createEntry);
+router.get("/:id", protect, logAction("view"), entryController.getEntryById);
 
 /**
  * @swagger
@@ -130,7 +91,7 @@ router.post("/", protect, entryController.createEntry);
  *       404:
  *         description: Entry not found
  */
-router.put("/:id", protect, entryController.updateEntry);
+router.put("/:id", protect, logAction("update"), entryController.updateEntry);
 
 /**
  * @swagger
@@ -155,6 +116,51 @@ router.put("/:id", protect, entryController.updateEntry);
  *       404:
  *         description: Entry not found
  */
-router.delete("/:id", protect, entryController.deleteEntry);
+router.delete(
+  "/:id",
+  protect,
+  logAction("delete"),
+  entryController.deleteEntry
+);
+
+/**
+ * @swagger
+ * /entries:
+ *   get:
+ *     summary: Get all entries
+ *     tags: [Entries]
+ *     responses:
+ *       200:
+ *         description: The list of entries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Entry'
+ */
+router.get("/", optionalAuth, entryController.getAllEntries);
+
+/**
+ * @swagger
+ * /entries:
+ *   post:
+ *     summary: Create a new entry
+ *     tags: [Entries]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Entry'
+ *     responses:
+ *       201:
+ *         description: The created entry
+ *       401:
+ *         description: Not authenticated
+ */
+router.post("/", protect, logAction("create"), entryController.createEntry);
 
 module.exports = router;

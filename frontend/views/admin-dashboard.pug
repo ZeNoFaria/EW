@@ -1,0 +1,152 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-4
+          i.fas.fa-tachometer-alt.me-2
+          | Admin Dashboard
+        p.lead System overview and management
+
+    // Statistics cards
+    if stats && stats.overview
+      .row.mb-5
+        .col-md-3.mb-3
+          .card.text-center.border-primary
+            .card-body
+              i.fas.fa-book.fa-2x.text-primary.mb-2
+              h4.text-primary= stats.overview.totalEntries || 0
+              small Total Entries
+        .col-md-3.mb-3
+          .card.text-center.border-success
+            .card-body
+              i.fas.fa-users.fa-2x.text-success.mb-2
+              h4.text-success= stats.overview.totalUsers || 0
+              small Total Users
+        .col-md-3.mb-3
+          .card.text-center.border-info
+            .card-body
+              i.fas.fa-eye.fa-2x.text-info.mb-2
+              h4.text-info= stats.overview.publicEntries || 0
+              small Public Entries
+        .col-md-3.mb-3
+          .card.text-center.border-warning
+            .card-body
+              i.fas.fa-comments.fa-2x.text-warning.mb-2
+              h4.text-warning= stats.overview.totalComments || 0
+              small Comments
+
+    .row
+      // Quick actions
+      .col-md-6.mb-4
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-bolt.me-2
+              | Quick Actions
+          .card-body
+            .d-grid.gap-2
+              a.btn.btn-primary(href="/entry/new")
+                i.fas.fa-plus.me-2
+                | Create New Entry
+              a.btn.btn-outline-secondary(href="/categories")
+                i.fas.fa-folder.me-2
+                | View Categories
+              a.btn.btn-outline-info(href="/admin/users")
+                i.fas.fa-users.me-2
+                | Manage Users
+              a.btn.btn-outline-success(href="/admin/stats")
+                i.fas.fa-chart-bar.me-2
+                | View Detailed Stats
+              a.btn.btn-outline-warning(href="/timeline")
+                i.fas.fa-clock.me-2
+                | View Timeline
+
+      // Recent users
+      .col-md-6.mb-4
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-users.me-2
+              | Recent Users
+          .card-body
+            if users && users.length > 0
+              .list-group.list-group-flush
+                each user in users.slice(0, 5)
+                  .list-group-item.d-flex.justify-content-between.align-items-center.px-0
+                    div
+                      strong= user.username
+                      br
+                      small.text-muted= user.email
+                    div
+                      span.badge.bg-primary= user.role || 'user'
+                      if user.isAdmin
+                        span.badge.bg-danger.ms-1 admin
+              .text-center.mt-3
+                a.btn.btn-outline-primary.btn-sm(href="/admin/users") View All Users
+            else
+              p.text-muted.mb-0 No users found
+
+    // Recent entries
+    if stats && stats.recentEntries && stats.recentEntries.length > 0
+      .row.mt-4
+        .col-12
+          .card
+            .card-header
+              h5.mb-0
+                i.fas.fa-book.me-2
+                | Recent Entries
+            .card-body
+              .table-responsive
+                table.table.table-sm
+                  thead
+                    tr
+                      th Title
+                      th Author
+                      th Date
+                      th Actions
+                  tbody
+                    each entry in stats.recentEntries
+                      tr
+                        td
+                          a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
+                        td= entry.author || 'Unknown'
+                        td= entry.date
+                        td
+                          .btn-group
+                            a.btn.btn-sm.btn-outline-primary(href=`/entry/${entry.id}`) View
+                            a.btn.btn-sm.btn-outline-secondary(href=`/entry/${entry.id}/edit`) Edit
+
+    // System health indicators
+    .row.mt-4
+      .col-md-4
+        .card.border-success
+          .card-body.text-center
+            i.fas.fa-check-circle.fa-2x.text-success.mb-2
+            h6 System Status
+            p.mb-0 Operational
+      .col-md-4
+        .card.border-info
+          .card-body.text-center
+            i.fas.fa-database.fa-2x.text-info.mb-2
+            h6 Database
+            p.mb-0 Connected
+      .col-md-4
+        .card.border-warning
+          .card-body.text-center
+            i.fas.fa-clock.fa-2x.text-warning.mb-2
+            h6 Last Backup
+            p.mb-0 Manual only
+
+block scripts
+  script.
+    // Simple client-side functionality
+    function refreshDashboard() {
+      window.location.reload();
+    }
+    
+    // Auto-refresh every 5 minutes (optional)
+    // setTimeout(refreshDashboard, 5 * 60 * 1000);
+    
+    console.log('Admin Dashboard loaded');

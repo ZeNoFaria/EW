@@ -87,7 +87,8 @@ block scripts
       if (tagName === 'All') {
         window.location.href = '/timeline';
       } else {
-        window.location.href = `/tag/${tagName.toLowerCase().replace(/\s+/g, '-')}`;
+        const tagSlug = tagName.toLowerCase().replace(/\s+/g, '-');
+        window.location.href = `/timeline?tag=${tagSlug}`;
       }
     }
     

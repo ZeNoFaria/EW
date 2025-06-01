@@ -3,60 +3,63 @@ extends layout
 block content
   .container.mt-4
     if entry
-      article.entry-detail
-        .row
-          .col-lg-8.offset-lg-2
-            header.mb-4
-              h1.display-5= entry.title
-              .d-flex.justify-content-between.align-items-center.text-muted.mb-3
+      article.entry
+        header.entry-header.mb-4
+          h1.entry-title= entry.title
+          .entry-meta.text-muted.mb-3
+            .d-flex.flex-wrap.align-items-center.gap-3
+              div
+                i.fas.fa-calendar.me-1
                 time= entry.date
-                if entry.category
-                  span.badge.bg-info= entry.category
+              
+              if entry.category && entry.category !== "Uncategorized"
+                div
+                  i.fas.fa-folder.me-1
+                  span.badge.bg-primary= entry.category
               
               if entry.tags && entry.tags.length > 0
                 .mb-3
                   each tag in entry.tags
-                    span.badge.bg-secondary.me-1= tag
+                    - var tagName = typeof tag === 'string' ? tag : (tag.name || tag)
+                    - var tagSlug = tagName.toLowerCase().replace(/\s+/g, '-')
+                    a.badge.bg-secondary.text-decoration-none.me-1(href=`/timeline?tag=${tagSlug}`)= tagName
 
-            .entry-content.mb-4
-              if entry.content
-                .lh-lg!= entry.content.replace(/\n/g, '<br>')
-              else if entry.excerpt
-                p.lead= entry.excerpt
-              else
-                p.text-muted No content available.
+        .entry-content.mb-4
+          if entry.content
+            .content-body!= entry.content.replace(/\n/g, '<br>')
+          else
+            p.text-muted No content available.
 
-            footer.border-top.pt-4
-              .d-flex.gap-2.mb-4
-                button.btn.btn-outline-secondary(onclick="history.back()")
-                  i.fas.fa-arrow-left.me-2
-                  | Back
-                button.btn.btn-outline-primary(onclick=`shareEntry('${entry.id}', '${entry.title}')`)
-                  i.fas.fa-share.me-2
-                  | Share
-                if entry.editUrl
-                  a.btn.btn-outline-warning(href=entry.editUrl)
-                    i.fas.fa-edit.me-2
-                    | Edit
+        // Action buttons
+        if isAuthenticated && user
+          .entry-actions.mb-4
+            .btn-group
+              a.btn.btn-outline-primary(href=`/entry/${entry.id}/edit`)
+                i.fas.fa-edit.me-1
+                | Edit
+              button.btn.btn-outline-secondary(onclick=`shareEntry('${entry.id}', '${entry.title}')`)
+                i.fas.fa-share.me-1
+                | Share
+              button.btn.btn-outline-danger(onclick=`confirmDelete('${entry.id}', '${entry.title}')`)
+                i.fas.fa-trash.me-1
+                | Delete
 
-              if entry.relatedEntries && entry.relatedEntries.length > 0
-                .related-entries
-                  h4 Related Entries
-                  .row
-                    each related in entry.relatedEntries
-                      .col-md-6.mb-3
-                        .card
-                          .card-body
-                            h6.card-title
-                              a.text-decoration-none(href=`/entry/${related.id}`)= related.title
-                            p.card-text.small= related.excerpt
-                            small.text-muted= related.date
+        // Navigation
+        .entry-navigation.mb-4
+          .d-flex.justify-content-between
+            a.btn.btn-outline-secondary(href="/timeline")
+              i.fas.fa-arrow-left.me-1
+              | Back to Timeline
+            a.btn.btn-primary(href="/entry/new")
+              i.fas.fa-plus.me-1
+              | New Entry
+
     else
       .text-center.py-5
-        i.fas.fa-exclamation-triangle.fa-3x.text-warning.mb-3
-        h2 Entry Not Found
+        i.fas.fa-exclamation-triangle.fa-3x.text-muted.mb-3
+        h3.text-muted Entry not found
         p.text-muted The entry you're looking for doesn't exist or has been removed.
-        a.btn.btn-primary(href="/") Back to Home
+        a.btn.btn-primary(href="/") Go Home
 
 block scripts
   script.
@@ -65,14 +68,25 @@ block scripts
         navigator.share({
           title: title,
           text: `Check out this diary entry: ${title}`,
-          url: window.location.href
+          url: `${window.location.origin}/entry/${id}`
         }).catch(err => console.log('Error sharing:', err));
       } else {
-        const url = window.location.href;
+        const url = `${window.location.origin}/entry/${id}`;
         navigator.clipboard.writeText(url).then(() => {
           alert('Link copied to clipboard!');
         }).catch(() => {
           prompt('Copy this link:', url);
         });
+      }
+    }
+    
+    function confirmDelete(id, title) {
+      if (confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+        // Create a form to submit DELETE request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/entry/${id}/delete`;
+        document.body.appendChild(form);
+        form.submit();
       }
     }

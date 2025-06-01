@@ -23,7 +23,7 @@ const logAction = (action) => {
           const logData = {
             action,
             user: req.user?._id,
-            resource: req.params.id || req.params.aipId,
+            resource: req.params.id || req.params.aipId || req.params.entryId,
             resourceType: determineResourceType(req.originalUrl),
             ip: req.ip || req.connection.remoteAddress,
             userAgent: req.get("User-Agent"),
@@ -41,7 +41,8 @@ const logAction = (action) => {
           await Log.create(logData);
         }
       } catch (error) {
-        console.error("Logging error:", error);
+        console.error("Logging error:", error.message);
+        // Don't throw error to avoid breaking the request
       }
     };
 
@@ -49,15 +50,34 @@ const logAction = (action) => {
   };
 };
 
-// Determinar tipo de recurso baseado na URL
+// Determinar tipo de recurso baseado na URL - Melhorado
 const determineResourceType = (url) => {
+  // API endpoints
+  if (url.includes("/api/entries") || url.includes("/entries")) return "entry";
+  if (url.includes("/api/categories") || url.includes("/categories"))
+    return "category";
+  if (url.includes("/api/users") || url.includes("/users")) return "user";
+  if (url.includes("/api/auth") || url.includes("/auth")) return "auth";
+  if (url.includes("/api/admin") || url.includes("/admin")) return "admin";
+  if (url.includes("/api/news") || url.includes("/news")) return "news";
+  if (url.includes("/api/comments") || url.includes("/comments"))
+    return "comment";
+  if (url.includes("/api/tags") || url.includes("/tags")) return "tag";
+
+  // SIP system endpoints (legacy)
   if (url.includes("/sip/")) return "sip";
   if (url.includes("/aips/")) return "aip";
   if (url.includes("/dip/")) return "dip";
-  if (url.includes("/auth/")) return "user";
-  if (url.includes("/news/")) return "news";
-  if (url.includes("/comments/")) return "comment";
-  return "unknown";
+
+  // Frontend pages
+  if (url === "/" || url.startsWith("/timeline") || url.startsWith("/entry"))
+    return "page";
+
+  // API calls
+  if (url.startsWith("/api/")) return "api";
+
+  // Default to other instead of unknown
+  return "other";
 };
 
 // Sanitizar dados sensíveis do body
@@ -70,6 +90,7 @@ const sanitizeBody = (body) => {
   delete sanitized.password;
   delete sanitized.token;
   delete sanitized.secret;
+  delete sanitized.passwordConfirm;
 
   return sanitized;
 };
@@ -80,8 +101,10 @@ const logError = async (error, req, action = "error") => {
     await Log.create({
       action,
       user: req.user?._id,
+      resourceType: determineResourceType(req.originalUrl),
       ip: req.ip || req.connection.remoteAddress,
       userAgent: req.get("User-Agent"),
+      sessionId: req.sessionID,
       details: {
         method: req.method,
         url: req.originalUrl,
@@ -92,8 +115,52 @@ const logError = async (error, req, action = "error") => {
       errorMessage: error.message,
     });
   } catch (logError) {
-    console.error("Error logging error:", logError);
+    console.error("Error logging error:", logError.message);
   }
 };
 
-module.exports = { logAction, logError };
+// Log simples para eventos específicos
+const logSimpleAction = async (
+  userId,
+  action,
+  resourceType = "other",
+  resourceId = null,
+  details = {}
+) => {
+  try {
+    await Log.create({
+      action,
+      user: userId,
+      resource: resourceId,
+      resourceType,
+      details,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Simple logging error:", error.message);
+  }
+};
+
+// Log de autenticação
+const logAuthAction = async (userId, action, details = {}, success = true) => {
+  try {
+    await Log.create({
+      action,
+      user: userId,
+      resourceType: "auth",
+      details,
+      success,
+      errorMessage: success ? null : details.error,
+    });
+  } catch (error) {
+    console.error("Auth logging error:", error.message);
+  }
+};
+
+module.exports = {
+  logAction,
+  logError,
+  logSimpleAction,
+  logAuthAction,
+  determineResourceType,
+};

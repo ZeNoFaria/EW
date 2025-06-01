@@ -6,10 +6,12 @@ block content
       .col-12
         h2.mb-4 Categories
         
+    .row
+      .col-md-8
         if categories && categories.length > 0
           .row
             each category in categories
-              .col-md-6.col-lg-4.mb-4
+              .col-md-6.mb-4
                 .card.shadow-sm
                   .card-body
                     .d-flex.justify-content-between.align-items-center.mb-3
@@ -39,6 +41,42 @@ block content
             if isAuthenticated
               a.btn.btn-primary(href="/entry/new") Create Your First Entry
 
+      // Sidebar with tags
+      .col-md-4
+        .card
+          .card-header
+            h5.mb-0
+              i.fas.fa-tags.me-2
+              | Popular Tags
+          .card-body
+            if allTags && allTags.length > 0
+              .tag-cloud
+                each tag in allTags
+                  a.btn.btn-outline-primary.btn-sm.me-1.mb-2(
+                    href=`/timeline?tag=${tag.slug}`
+                    title=`${tag.count} entries`
+                  )
+                    = tag.name
+                    span.badge.bg-secondary.ms-1= tag.count
+              .text-center.mt-3
+                a.btn.btn-outline-secondary.btn-sm(href="/timeline") View All in Timeline
+            else
+              p.text-muted.mb-0 No tags available yet.
+
+        .card.mt-3
+          .card-header
+            h5.mb-0
+              i.fas.fa-chart-bar.me-2
+              | Quick Stats
+          .card-body
+            .row.text-center
+              .col-6
+                h4.text-primary= activeCategories || 0
+                small Categories
+              .col-6
+                h4.text-success= totalItems || 0
+                small Total Items
+
     // Stats section
     if totalItems || activeCategories
       .row.mt-5
@@ -48,32 +86,20 @@ block content
             .col-md-3.mb-3
               .card.text-center.bg-light
                 .card-body
-                  h4.text-primary= totalItems || 0
-                  small Total Items
-            .col-md-3.mb-3
-              .card.text-center.bg-light
-                .card-body
-                  h4.text-success= activeCategories || 0
+                  h4.text-primary= activeCategories || 0
                   small Active Categories
             .col-md-3.mb-3
               .card.text-center.bg-light
                 .card-body
-                  h4.text-info= publicItems || 0
-                  small Public Items
+                  h4.text-success= totalItems || 0
+                  small Total Items
             .col-md-3.mb-3
               .card.text-center.bg-light
                 .card-body
-                  h6.text-secondary= lastItemDate || 'N/A'
-                  small Last Update
-
-    // Popular tags section
-    if tags && tags.length > 0
-      .row.mt-5
-        .col-12
-          h3.mb-4 Popular Tags
-          .tag-cloud
-            each tag in tags.slice(0, 20)
-              a.btn.btn-outline-secondary.btn-sm.me-2.mb-2(href=`/tag/${tag.slug}`)
-                = tag.name
-                if tag.count
-                  span.badge.bg-secondary.ms-1= tag.count
+                  h4.text-info= allTags ? allTags.length : 0
+                  small Total Tags
+            .col-md-3.mb-3
+              .card.text-center.bg-light
+                .card-body
+                  h6.text-secondary= allTags && allTags.length > 0 ? allTags[0].name : 'N/A'
+                  small Most Popular Tag

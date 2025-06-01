@@ -1,0 +1,119 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-4
+          i.fas.fa-users.me-2
+          | User Management
+        p.lead Manage user accounts and permissions
+
+    if message
+      .alert.alert-success.alert-dismissible.fade.show(role="alert")
+        = message
+        button.btn-close(type="button", data-bs-dismiss="alert")
+
+    if error
+      .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+        = error
+        button.btn-close(type="button", data-bs-dismiss="alert")
+
+    .row
+      .col-12
+        .card
+          .card-header.d-flex.justify-content-between.align-items-center
+            h5.mb-0 All Users
+            span.badge.bg-primary= users ? users.length : 0
+
+          .card-body
+            if users && users.length > 0
+              .table-responsive
+                table.table.table-hover
+                  thead
+                    tr
+                      th Avatar
+                      th Username
+                      th Email
+                      th Role
+                      th Provider
+                      th Joined
+                      th Actions
+                  tbody
+                    each user in users
+                      tr
+                        td
+                          if user.avatar
+                            img.rounded-circle(src=user.avatar width="32" height="32" alt="Avatar")
+                          else
+                            .bg-secondary.rounded-circle.d-inline-flex.align-items-center.justify-content-center(style="width: 32px; height: 32px;")
+                              i.fas.fa-user.text-white
+                        td
+                          strong= user.username
+                          if user.isAdmin
+                            span.badge.bg-danger.ms-2 Admin
+                        td= user.email
+                        td
+                          span.badge(class=user.role === 'admin' ? 'bg-danger' : 'bg-primary')= user.role || 'user'
+                        td
+                          span.badge.bg-info= user.provider || 'local'
+                        td= new Date(user.createdAt).toLocaleDateString()
+                        td
+                          .dropdown
+                            button.btn.btn-sm.btn-outline-secondary.dropdown-toggle(type="button" data-bs-toggle="dropdown")
+                              | Actions
+                            ul.dropdown-menu
+                              li
+                                button.btn.dropdown-item(onclick=`changeRole('${user._id}', '${user.role}', '${user.username}')`)
+                                  i.fas.fa-user-cog.me-2
+                                  | Change Role
+                              if user._id.toString() !== user.currentUserId
+                                li
+                                  hr.dropdown-divider
+                                li
+                                  button.btn.dropdown-item.text-danger(onclick=`confirmAction('delete', '${user._id}', '${user.username}')`)
+                                    i.fas.fa-trash.me-2
+                                    | Delete User
+            else
+              .text-center.py-4
+                i.fas.fa-users.fa-3x.text-muted.mb-3
+                h5.text-muted No users found
+
+    // Role change modal
+    .modal.fade#roleModal(tabindex="-1")
+      .modal-dialog
+        .modal-content
+          .modal-header
+            h5.modal-title Change User Role
+            button.btn-close(type="button" data-bs-dismiss="modal")
+          .modal-body
+            form#roleForm(method="POST")
+              p#roleMessage
+              .mb-3
+                label.form-label Role
+                select.form-select#roleSelect(name="role" required)
+                  option(value="user") User
+                  option(value="admin") Admin
+          .modal-footer
+            button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Cancel
+            button.btn.btn-primary(type="submit" form="roleForm") Update Role
+
+block scripts
+  script.
+    function changeRole(userId, currentRole, username) {
+      document.getElementById('roleMessage').textContent = `Change role for ${username}:`;
+      document.getElementById('roleSelect').value = currentRole;
+      document.getElementById('roleForm').action = `/admin/users/${userId}/role`;
+      
+      const modal = new bootstrap.Modal(document.getElementById('roleModal'));
+      modal.show();
+    }
+    
+    function confirmAction(action, userId, username) {
+      if (action === 'delete') {
+        if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+          // Implement delete functionality
+          alert('Delete functionality not implemented yet');
+        }
+      }
+    }

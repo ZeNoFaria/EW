@@ -1,4 +1,3 @@
-// filepath: /home/diogo/Desktop/Uni/EngWeb/EW/backend/src/middleware/auth.js
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const User = require("../models/userSchema");
@@ -8,40 +7,104 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 // Middleware original (mantém compatibilidade)
 exports.protect = async (req, res, next) => {
   try {
-    // Get token from header
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    console.log("=== AUTH MIDDLEWARE DEBUG ===");
+    console.log("Authorization header:", req.headers.authorization);
 
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "No token, authorization denied" });
+    let token;
+
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      try {
+        // Get token from header
+        token = req.headers.authorization.split(" ")[1];
+        console.log("Extracted token:", token ? "EXISTS" : "NOT FOUND");
+
+        // Verify token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        console.log("Decoded token:", decoded);
+
+        // Get user from the token
+        req.user = await User.findById(decoded.id).select("-password");
+        console.log(
+          "Found user:",
+          req.user
+            ? {
+                id: req.user._id,
+                username: req.user.username,
+                isAdmin: req.user.isAdmin,
+              }
+            : "NOT FOUND"
+        );
+
+        if (!req.user) {
+          console.log("User not found in database");
+          return res.status(401).json({
+            success: false,
+            message: "Not authorized, user not found",
+          });
+        }
+
+        console.log("User authenticated successfully");
+        next();
+      } catch (error) {
+        console.error("Token verification error:", error);
+        return res.status(401).json({
+          success: false,
+          message: "Not authorized, token failed",
+        });
+      }
+    } else {
+      console.log("No authorization header or invalid format");
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, no token",
+      });
     }
-
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    // Find user
-    const user = await User.findById(decoded.id).select("-password");
-
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    // Add user to request
-    req.user = user;
-    next();
   } catch (error) {
     console.error("Auth middleware error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error in authentication",
+    });
+  }
+};
 
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
+// Middleware opcional (não requer autenticação)
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    console.log("=== OPTIONAL AUTH DEBUG ===");
+    console.log("Authorization header:", req.headers.authorization);
+
+    let token;
+
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      try {
+        token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = await User.findById(decoded.id).select("-password");
+        console.log(
+          "Optional auth successful, user:",
+          req.user ? req.user.username : "not found"
+        );
+      } catch (error) {
+        console.log(
+          "Optional auth failed, continuing without user:",
+          error.message
+        );
+      }
+    } else {
+      console.log("No auth header, continuing without user");
     }
 
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expired" });
-    }
-
-    res.status(500).json({ message: "Server error in auth middleware" });
+    next();
+  } catch (error) {
+    console.error("Optional auth error:", error);
+    next();
   }
 };
 

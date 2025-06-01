@@ -1,0 +1,52 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-4 Tags
+        p.lead Explore entries by tags
+
+    // Tags cloud
+    .row.mb-5
+      .col-12
+        if tags && tags.length > 0
+          .tag-cloud
+            each tag in tags
+              a.btn.btn-outline-primary.me-2.mb-2(href=`/tag/${tag.slug}`)
+                = tag.name
+                span.badge.bg-secondary.ms-1= tag.count
+        else
+          .text-center.py-5
+            i.fas.fa-tags.fa-3x.text-muted.mb-3
+            h3.text-muted No tags found
+            p.text-muted Start creating content with tags to see them here.
+
+    // Statistics
+    if totalTags && totalTags > 0
+      .row.mt-5
+        .col-12
+          h3.mb-4 Tag Statistics
+          .row
+            .col-md-3.mb-3
+              .card.text-center.bg-light
+                .card-body
+                  h4.text-primary= totalTags
+                  small Total Tags
+            .col-md-3.mb-3
+              .card.text-center.bg-light
+                .card-body
+                  h4.text-success= totalEntries || 0
+                  small Total Entries
+            .col-md-3.mb-3
+              .card.text-center.bg-light
+                .card-body
+                  - var avgEntries = totalEntries && totalTags ? Math.round(totalEntries / totalTags * 10) / 10 : 0
+                  h4.text-info= avgEntries
+                  small Avg. Entries per Tag
+            .col-md-3.mb-3
+              .card.text-center.bg-light
+                .card-body
+                  - var mostPopular = tags && tags.length > 0 ? tags[0].name : 'N/A'
+                  h6.text-secondary= mostPopular
+                  small Most Popular Tag

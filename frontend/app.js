@@ -3,6 +3,7 @@ const path = require("path");
 const session = require("express-session");
 const indexRouter = require("./routes/index");
 const authRouter = require("./routes/auth");
+const adminRouter = require("./routes/admin");
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use("/auth", authRouter);
+app.use("/admin", adminRouter);
 app.use("/", indexRouter);
 
 // Error handling middleware

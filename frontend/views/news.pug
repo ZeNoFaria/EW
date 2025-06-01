@@ -1,0 +1,72 @@
+extends layout
+
+block content
+  .container.mt-4
+    .row.mb-4
+      .col-12
+        h2.mb-4 News & Updates
+        p.lead Stay updated with the latest news and announcements
+
+    .row
+      .col-lg-8
+        if news && news.length > 0
+          each article in news
+            .card.mb-4.shadow-sm
+              .card-body
+                .d-flex.justify-content-between.align-items-start.mb-2
+                  h4.card-title= article.title
+                  if article.category
+                    span.badge.bg-primary= article.category.name
+                
+                if article.summary
+                  p.card-text.text-muted= article.summary
+                
+                if article.content
+                  .card-text!= article.content.substring(0, 300) + (article.content.length > 300 ? '...' : '')
+                
+                .d-flex.justify-content-between.align-items-center.mt-3
+                  small.text-muted
+                    | By #{article.author?.username || 'Admin'} on 
+                    time= new Date(article.createdAt).toLocaleDateString()
+                  a.btn.btn-outline-primary.btn-sm(href=`/news/${article._id}`) Read More
+        else
+          .text-center.py-5
+            i.fas.fa-newspaper.fa-3x.text-muted.mb-3
+            h3.text-muted No news available
+            p.text-muted Check back later for updates and announcements.
+
+      .col-lg-4
+        // Sidebar with recent entries or categories
+        .card
+          .card-header
+            h5.mb-0 Recent Entries
+          .card-body
+            p.text-muted Browse recent diary entries
+            a.btn.btn-outline-primary.btn-sm(href="/timeline") View Timeline
+
+    // Pagination
+    if pagination && pagination.totalPages > 1
+      nav.mt-4
+        ul.pagination.justify-content-center
+          li.page-item(class=pagination.currentPage <= 1 ? 'disabled' : '')
+            a.page-link(href=`/news?page=${pagination.currentPage - 1}`) Previous
+          
+          - var startPage = Math.max(1, pagination.currentPage - 2)
+          - var endPage = Math.min(pagination.totalPages, pagination.currentPage + 2)
+          
+          if startPage > 1
+            li.page-item: a.page-link(href="/news?page=1") 1
+            if startPage > 2
+              li.page-item.disabled: span.page-link ...
+          
+          - for (var i = startPage; i <= endPage; i++)
+            li.page-item(class=i === pagination.currentPage ? 'active' : '')
+              a.page-link(href=`/news?page=${i}`)= i
+          
+          if endPage < pagination.totalPages
+            if endPage < pagination.totalPages - 1
+              li.page-item.disabled: span.page-link ...
+            li.page-item: a.page-link(href=`/news?page=${pagination.totalPages}`)= pagination.totalPages
+          
+          li.page-item(class=pagination.currentPage >= pagination.totalPages ? 'disabled' : '')
+            a.page-link(href=`/news?page=${pagination.currentPage + 1}`) Next

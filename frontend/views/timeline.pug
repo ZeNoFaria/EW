@@ -4,21 +4,67 @@ block content
   .container.mt-4
     .row.mb-4
       .col-12
-        h2.mb-4= pageTitle || "Timeline"
+        h2.mb-4 Timeline
+        p.lead Browse all entries in chronological order
 
-        // Filter section
+        // Search and filter section
         .row.mb-4
-          .col-md-8
+          .col-md-6
             .input-group
-              input.form-control(type="text" placeholder=filterPlaceholder || "Filter timeline..." id="timeline-filter")
-              button.btn.btn-outline-secondary(type="button")= filterButtonText || "Filter"
+              input.form-control#timeline-search(
+                type="text" 
+                placeholder="Search entries..." 
+                value=currentSearch || ""
+              )
+              button.btn.btn-outline-secondary(type="button" onclick="performSearch()") 
+                i.fas.fa-search
+
+          .col-md-6
+            // Category filter
+            if categories && categories.length > 0
+              select.form-select#category-filter(onchange="applyFilters()")
+                option(value="all" selected=currentCategory === "all") All Categories
+                each category in categories
+                  option(value=category.name selected=currentCategory === category.name)= category.name
 
         // Tag filters
-        .row.mb-4
-          .col-12
-            .d-flex.flex-wrap.gap-2
-              each tag in filterTags || [{name: "All", value: "All"}]
-                button.btn.btn-outline-primary.btn-sm(onclick=`filterByTag('${tag.value}')`)= tag.name
+        if allTags && allTags.length > 0
+          .row.mb-4
+            .col-12
+              h6 Filter by Tags:
+              .d-flex.flex-wrap.gap-2
+                button.btn.btn-sm(
+                  class=currentTag === "all" ? "btn-primary" : "btn-outline-primary"
+                  onclick="filterByTag('all')"
+                ) All
+                each tag in allTags
+                  button.btn.btn-sm(
+                    class=currentTag === tag.slug ? "btn-primary" : "btn-outline-primary"
+                    onclick=`filterByTag('${tag.slug}')`
+                  )
+                    = tag.name
+                    span.badge.bg-light.text-dark.ms-1= tag.count
+
+        // Active filters display
+        if currentTag !== "all" || currentCategory !== "all" || currentSearch
+          .row.mb-3
+            .col-12
+              .alert.alert-info.d-flex.justify-content-between.align-items-center
+                div
+                  strong Active Filters: 
+                  if currentSearch
+                    span.badge.bg-primary.me-1 Search: #{currentSearch}
+                  if currentTag !== "all"
+                    span.badge.bg-success.me-1 Tag: #{currentTag}
+                  if currentCategory !== "all"
+                    span.badge.bg-info.me-1 Category: #{currentCategory}
+                button.btn.btn-sm.btn-outline-secondary(onclick="clearAllFilters()") Clear All
+
+        // Results count
+        if entries && entries.length > 0
+          .row.mb-3
+            .col-12
+              p.text-muted= `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
 
         // Timeline entries
         if entries && entries.length > 0
@@ -30,44 +76,137 @@ block content
                     .col-md-2.text-center
                       .badge.bg-primary.fs-6= entry.date
                     .col-md-10
-                      h4.card-title= entry.title
-                      p.card-text= entry.excerpt
+                      h4.card-title
+                        a.text-decoration-none(href=`/entry/${entry.id}`)= entry.title
                       
-                      if entry.tags && entry.tags.length
-                        .mb-3
-                          each tag in entry.tags
-                            span.badge.bg-secondary.me-1= tag.name || tag
+                      if entry.excerpt
+                        p.card-text= entry.excerpt
                       
-                      .d-flex.gap-2
-                        if entry.id
-                          a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`)= readMoreText || "Read More"
-                        button.btn.btn-outline-secondary.btn-sm= shareButtonText || "Share"
+                      .d-flex.justify-content-between.align-items-center.mb-3
+                        div
+                          if entry.category && entry.category !== "Uncategorized"
+                            span.badge.bg-info.me-2= entry.category
+                          
+                          if entry.tags && entry.tags.length
+                            each tag in entry.tags.slice(0, 3)
+                              - var tagName = typeof tag === 'string' ? tag : tag.name || tag
+                              - var tagSlug = tagName.toLowerCase().replace(/\s+/g, '-')
+                              button.btn.btn-sm.btn-outline-secondary.me-1(
+                                onclick=`filterByTag('${tagSlug}')`
+                                title=`Filter by ${tagName}`
+                              )= tagName
+                            if entry.tags.length > 3
+                              span.text-muted.small +#{entry.tags.length - 3} more
+                        
+                        .btn-group
+                          a.btn.btn-outline-primary.btn-sm(href=`/entry/${entry.id}`) Read More
+                          button.btn.btn-outline-secondary.btn-sm(onclick=`shareEntry('${entry.id}', '${entry.title}')`) Share
         else
           .text-center.py-5
             i.fas.fa-clock.fa-3x.text-muted.mb-3
-            p.text-muted.fs-5= noEntriesMessage || "No entries found."
+            h3.text-muted No entries found
+            if currentTag !== "all" || currentCategory !== "all" || currentSearch
+              p.text-muted Try adjusting your filters or search terms.
+              button.btn.btn-primary(onclick="clearAllFilters()") Clear Filters
+            else
+              p.text-muted Start writing to see your timeline grow.
+              if isAuthenticated
+                a.btn.btn-primary(href="/entry/new") Create Your First Entry
 
-        // Pagination
-        if pagination
+        // Simple pagination
+        if pagination && pagination.totalPages > 1
           nav.mt-4
             ul.pagination.justify-content-center
-              li.page-item(class=!pagination.prevUrl ? 'disabled' : '')
-                a.page-link(href=pagination.prevUrl || "#") Previous
-              each page in pagination.pages || []
-                li.page-item(class=page.active ? 'active' : '')
-                  a.page-link(href=page.url)= page.number
-              li.page-item(class=!pagination.nextUrl ? 'disabled' : '')
-                a.page-link(href=pagination.nextUrl || "#") Next
+              if pagination.hasPrev
+                li.page-item
+                  a.page-link(href=`?page=${pagination.currentPage - 1}${currentSearch ? '&search=' + currentSearch : ''}${currentTag !== 'all' ? '&tag=' + currentTag : ''}${currentCategory !== 'all' ? '&category=' + currentCategory : ''}`) Previous
+              else
+                li.page-item.disabled
+                  span.page-link Previous
+              
+              li.page-item.active
+                span.page-link= pagination.currentPage
+              
+              if pagination.hasNext
+                li.page-item
+                  a.page-link(href=`?page=${pagination.currentPage + 1}${currentSearch ? '&search=' + currentSearch : ''}${currentTag !== 'all' ? '&tag=' + currentTag : ''}${currentCategory !== 'all' ? '&category=' + currentCategory : ''}`) Next
+              else
+                li.page-item.disabled
+                  span.page-link Next
 
 block scripts
-  if scripts && scripts.length > 0
-    each script in scripts
-      script(src=script)
   script.
-    function filterByTag(tagValue) {
-      if (tagValue === 'All') {
-        window.location.href = '/timeline';
+    function filterByTag(tagSlug) {
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (tagSlug === 'all') {
+        params.delete('tag');
       } else {
-        window.location.href = `/tag/${tagValue.toLowerCase().replace(/\s+/g, '-')}`;
+        params.set('tag', tagSlug);
+      }
+      
+      params.delete('page'); // Reset pagination
+      currentUrl.search = params.toString();
+      window.location.href = currentUrl.toString();
+    }
+    
+    function applyFilters() {
+      const category = document.getElementById('category-filter').value;
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (category === 'all') {
+        params.delete('category');
+      } else {
+        params.set('category', category);
+      }
+      
+      params.delete('page'); // Reset pagination
+      currentUrl.search = params.toString();
+      window.location.href = currentUrl.toString();
+    }
+    
+    function performSearch() {
+      const search = document.getElementById('timeline-search').value;
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      
+      if (search.trim()) {
+        params.set('search', search);
+      } else {
+        params.delete('search');
+      }
+      
+      params.delete('page'); // Reset pagination
+      currentUrl.search = params.toString();
+      window.location.href = currentUrl.toString();
+    }
+    
+    function clearAllFilters() {
+      window.location.href = '/timeline';
+    }
+    
+    function shareEntry(id, title) {
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          text: `Check out this diary entry: ${title}`,
+          url: `${window.location.origin}/entry/${id}`
+        }).catch(err => console.log('Error sharing:', err));
+      } else {
+        const url = `${window.location.origin}/entry/${id}`;
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Link copied to clipboard!');
+        }).catch(() => {
+          prompt('Copy this link:', url);
+        });
       }
     }
+    
+    // Allow search on Enter key
+    document.getElementById('timeline-search')?.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
